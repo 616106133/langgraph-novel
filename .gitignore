@@ -21,3 +21,8 @@ Thumbs.db
 novels/
 outputs/
 *.log
+
+# Deployment
+Dockerfile
+fly.toml
+
