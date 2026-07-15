@@ -20,5 +20,4 @@ Thumbs.db
 # Project specific
 novels/
 outputs/
-*.txt
 *.log
