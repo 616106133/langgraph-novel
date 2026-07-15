@@ -1,0 +1,724 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>LangGraph 小说仓库</title>
+<style>
+:root {
+  --c-bg: #f4f6f9;
+  --c-surface: #fff;
+  --c-primary: #4f46e5;
+  --c-primary-hover: #4338ca;
+  --c-text: #1e293b;
+  --c-muted: #64748b;
+  --c-border: #e2e8f0;
+  --c-card-shadow: 0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --c-card-shadow-hover: 0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -2px rgba(0,0,0,.05);
+  --radius: 10px;
+  --sidebar-w: 260px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;
+  background:var(--c-bg);color:var(--c-text);min-height:100vh;
+  display:flex;flex-direction:column;line-height:1.6;
+}
+a{color:var(--c-primary);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── header ── */
+header{
+  background:var(--c-surface);border-bottom:1px solid var(--c-border);
+  padding:0 24px;height:58px;display:flex;align-items:center;
+  justify-content:space-between;flex-shrink:0;
+}
+header .logo{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+header .logo span{color:var(--c-primary)}
+header nav{display:flex;gap:4px}
+header nav a{
+  padding:8px 14px;border-radius:8px;font-size:14px;color:var(--c-muted);
+  transition:.15s;cursor:pointer;
+}
+header nav a:hover,header nav a.active{background:#f1f5f9;color:var(--c-text);text-decoration:none}
+
+/* ── main container ── */
+main{flex:1;padding:32px 24px;max-width:1200px;margin:0 auto;width:100%}
+.page{display:none;animation:fadeIn .2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── homepage cards ── */
+.home-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:32px}
+.home-card{
+  background:var(--c-surface);border-radius:var(--radius);box-shadow:var(--c-card-shadow);
+  padding:48px 36px;cursor:pointer;transition:.2s;border:1px solid var(--c-border);
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;
+}
+.home-card:hover{box-shadow:var(--c-card-shadow-hover);transform:translateY(-2px)}
+.home-card .icon{font-size:48px}
+.home-card h3{font-size:20px}
+.home-card p{color:var(--c-muted);font-size:14px;max-width:280px}
+
+/* ── create form ── */
+.form-card{
+  background:var(--c-surface);border-radius:var(--radius);box-shadow:var(--c-card-shadow);
+  max-width:640px;margin:24px auto;padding:36px;
+}
+.form-card label{display:block;font-size:14px;font-weight:600;margin-bottom:6px;margin-top:20px}
+.form-card label:first-child{margin-top:0}
+.form-card input,.form-card textarea{
+  width:100%;padding:12px 14px;border:1px solid var(--c-border);border-radius:8px;
+  font-size:15px;font-family:inherit;transition:.15s;outline:none;
+}
+.form-card input:focus,.form-card textarea:focus{border-color:var(--c-primary);box-shadow:0 0 0 3px rgba(79,70,229,.12)}
+.form-card textarea{min-height:120px;resize:vertical}
+.form-card .hint{font-size:12px;color:var(--c-muted);margin-top:4px}
+.form-actions{display:flex;gap:12px;margin-top:28px}
+.btn{
+  padding:10px 24px;border-radius:8px;border:none;font-size:15px;font-weight:600;
+  cursor:pointer;transition:.15s;font-family:inherit;
+}
+.btn-primary{background:var(--c-primary);color:#fff}
+.btn-primary:hover{background:var(--c-primary-hover)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-secondary{background:#f1f5f9;color:var(--c-text)}
+.btn-secondary:hover{background:#e2e8f0}
+
+/* ── library grid ── */
+.library-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:24px}
+.novel-card{
+  background:var(--c-surface);border-radius:var(--radius);box-shadow:var(--c-card-shadow);
+  padding:24px;cursor:pointer;transition:.2s;border:1px solid var(--c-border);
+  display:flex;flex-direction:column;gap:8px;
+}
+.novel-card:hover{box-shadow:var(--c-card-shadow-hover);transform:translateY(-2px)}
+.novel-card h4{font-size:16px}
+.novel-card .meta{font-size:12px;color:var(--c-muted)}
+.novel-card .preview{font-size:13px;color:var(--c-muted);flex:1}
+.novel-card .delete-btn{
+  align-self:flex-end;background:none;border:none;color:#ef4444;
+  cursor:pointer;font-size:13px;padding:4px 8px;border-radius:6px;
+}
+.novel-card .delete-btn:hover{background:#fef2f2}
+
+/* ── novel detail ── */
+.detail-layout{display:flex;gap:0;margin-top:16px;min-height:60vh}
+.detail-sidebar{
+  width:var(--sidebar-w);flex-shrink:0;
+  background:var(--c-surface);border-radius:var(--radius) 0 0 var(--radius);
+  border:1px solid var(--c-border);overflow:hidden;
+}
+.detail-sidebar .tab{
+  padding:14px 20px;cursor:pointer;border-bottom:1px solid var(--c-border);
+  font-size:14px;transition:.1s;display:flex;align-items:center;gap:10px;
+}
+.detail-sidebar .tab:last-child{border-bottom:none}
+.detail-sidebar .tab:hover{background:#f8fafc}
+.detail-sidebar .tab.active{background:#eef2ff;color:var(--c-primary);font-weight:600}
+.detail-main{
+  flex:1;background:var(--c-surface);
+  border:1px solid var(--c-border);border-left:none;
+  border-radius:0 var(--radius) var(--radius) 0;padding:28px 32px;
+  overflow-y:auto;max-height:75vh;
+}
+.detail-main h2{font-size:20px;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--c-border)}
+.detail-main .field{margin-bottom:12px}
+.detail-main .field-label{font-size:12px;color:var(--c-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.detail-main .field-value{font-size:14px;margin-top:2px}
+.char-item,.chapter-item{
+  background:#f8fafc;border-radius:8px;padding:16px;margin-bottom:12px;border:1px solid var(--c-border)
+}
+.char-item h4{font-size:15px;margin-bottom:4px}
+.char-item .tag{
+  display:inline-block;font-size:11px;padding:2px 8px;border-radius:12px;
+  background:#eef2ff;color:var(--c-primary);margin-right:6px;
+}
+.chapter-item h4{font-size:14px;margin-bottom:4px}
+.chapter-item .meta{font-size:12px;color:var(--c-muted)}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--c-muted)}
+.empty-state .icon{font-size:56px;margin-bottom:16px}
+.empty-state h3{color:var(--c-text);margin-bottom:8px}
+
+@media(max-width:768px){
+  .home-grid{grid-template-columns:1fr}
+  .detail-layout{flex-direction:column}
+  .detail-sidebar{width:100%;border-radius:var(--radius);border-bottom:none;display:flex;overflow-x:auto}
+  .detail-sidebar .tab{border-bottom:none;border-right:1px solid var(--c-border);white-space:nowrap}
+  .detail-main{border-left:1px solid var(--c-border);border-radius:0 0 var(--radius) var(--radius)}
+  .detail-sidebar .tab:last-child{border-right:none}
+}
+
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:1000;align-items:flex-start;justify-content:center;padding-top:8vh}
+.modal-overlay.active{display:flex}
+.modal-box{background:#fff;border-radius:12px;width:100%;max-width:480px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-box h3{font-size:18px;margin-bottom:20px}
+.modal-box label{display:block;font-size:13px;font-weight:600;margin-top:16px;margin-bottom:4px}
+.modal-box input,.modal-box select{width:100%;padding:10px 12px;border:1px solid var(--c-border);border-radius:8px;font-size:14px;font-family:inherit;outline:none}
+.modal-box input:focus,.modal-box select:focus{border-color:var(--c-primary);box-shadow:0 0 0 3px rgba(79,70,229,.12)}
+.modal-box .hint{font-size:12px;color:var(--c-muted);margin-top:4px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span>LangGraph</span> 小说仓库</div>
+  <nav>
+    <a onclick="navigate('home')" id="nav-home">首页</a>
+    <a onclick="navigate('library')" id="nav-library">小说库</a>
+  <a onclick="showSettings()" id="nav-settings" style="font-size:18px;cursor:pointer;padding:4px 8px" title="&#35774;&#32622;">&#9881;</a></nav>
+</header>
+
+<main id="app">
+
+<!-- 首页 -->
+<div class="page active" id="page-home">
+  <h1 style="font-size:28px;text-align:center;margin-top:20px">小说创作工作台</h1>
+  <p style="text-align:center;color:var(--c-muted);margin-top:8px">使用 LangGraph 流水线，从创意到结构化设定，一步到位</p>
+  <div class="home-grid">
+    <div class="home-card" onclick="navigate('create')">
+      <div class="icon">&#10024;</div>
+      <h3>创立新小说</h3>
+      <p>输入书名和创意，AI 自动生成世界观、角色卡和分章大纲</p>
+    </div>
+    <div class="home-card" onclick="navigate('library')">
+      <div class="icon">&#128218;</div>
+      <h3>小说仓库</h3>
+      <p>查看已有小说，浏览设定、角色和大纲</p>
+    </div>
+  </div>
+</div>
+
+<!-- 创建页 -->
+<div class="page" id="page-create">
+  <h1 style="font-size:24px">创立新小说</h1>
+  <div class="form-card">
+    <label>小说标题</label>
+    <input id="novel-title" placeholder="给小说取个名字" maxlength="60">
+    <label>一句话创意</label>
+    <textarea id="novel-idea" placeholder="描述小说的核心创意，比如：&#10;一个普通高中生意外绑定"诸天万界商城系统"，能用积分兑换漫威超能力，但每次兑换都会引来异次元怪物追杀。"></textarea>
+    <div class="hint">创意越具体，生成的设定越精准。建议包含主角、核心冲突和独特设定。</div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="btn-create" onclick="createNovel()">开始生成</button>
+      <button class="btn btn-secondary" onclick="navigate('home')">取消</button>
+    </div>
+    <div id="create-status" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- 小说库 -->
+<div class="page" id="page-library">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <h1 style="font-size:24px">小说仓库</h1>
+    <button class="btn btn-primary" onclick="navigate('create')">+ 新小说</button>
+  </div>
+  <div id="library-grid" class="library-grid">
+    <div class="empty-state">
+      <div class="icon">&#128214;</div>
+      <h3>还没有小说</h3>
+      <p>点击上方「新小说」开始创作</p>
+    </div>
+  </div>
+</div>
+
+<!-- 小说详情 -->
+<div class="page" id="page-novel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <div>
+      <a href="javascript:void(0)" onclick="navigate('library')" style="font-size:14px">&larr; 返回仓库</a>
+      <h1 id="novel-title-display" style="font-size:22px;margin-top:4px"></h1>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" id="btn-delete" onclick="deleteNovel()" style="color:#ef4444">删除</button>
+    </div>
+    <div id="edit-bar" style="display:none;gap:8px">
+      <button class="btn btn-primary" onclick="saveEdit()" style="font-size:13px">✔ 保存</button>
+      <button class="btn btn-secondary" onclick="cancelEdit()" style="font-size:13px">✕ 取消</button>
+    </div>
+    <button onclick="downloadFullNovel()" id="btn-download" style="font-size:11px;padding:3px 8px;border:1px solid var(--c-border);border-radius:5px;background:none;cursor:pointer;color:var(--c-primary)">下载 TXT</button>
+      <button class="btn btn-secondary" onclick="enterEdit()" id="btn-edit" style="font-size:13px">✎ 编辑</button>
+    </div>
+  <p id="novel-idea-display" style="color:var(--c-muted);font-size:13px;margin-bottom:8px"></p>
+  <div class="detail-layout">
+    <div class="detail-sidebar" id="detail-tabs">
+      <div class="tab active" data-tab="world" onclick="switchTab('world')">
+        &#127758; 世界观
+      </div>
+      <div class="tab" data-tab="characters" onclick="switchTab('characters')">
+        &#128100; 角色卡
+      </div>
+      <div class="tab" data-tab="outline" onclick="switchTab('outline')">
+        &#128221; 大纲
+      </div>
+      <div class="tab" data-tab="chapters" onclick="switchTab('chapters')">
+        &#128214; 章节
+      </div>
+    </div>
+    <div class="detail-main" id="detail-content">
+      <!-- 由 JS 填充 -->
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" id="settings-overlay">
+  <div class="modal-box">
+    <h3>&#9881; &#35774;&#32622;</h3>
+    <label>API &#25552;&#20379;&#21830;</label>
+    <select id="s-provider" onchange="onProviderChange()">
+      <option value="openai">OpenAI</option>
+      <option value="deepseek">DeepSeek</option>
+      <option value="custom">&#33258;&#23450;&#20041;</option>
+    </select>
+    <label>API Key</label>
+    <input type="password" id="s-key" placeholder="sk-..." autocomplete="off">
+    <div class="hint">&#20174; API &#25552;&#20379;&#21830;&#24179;&#21488;&#33719;&#21462;</div>
+    <label>&#27169;&#22411;</label>
+    <input id="s-model" placeholder="gpt-4o-mini">
+    <div class="hint">&#22914; gpt-4o-mini&#12289;deepseek-chat</div>
+    <label>API Base URL</label>
+    <input id="s-base-url" placeholder="https://api.openai.com/v1">
+    <div class="hint">&#20351;&#29992;&#20195;&#29702;&#25110;&#33258;&#23450;&#20041;&#31471;&#28857;&#26102;&#20462;&#25913;</div>
+    <div class="form-actions" style="margin-top:24px">
+      <button class="btn btn-primary" onclick="saveSettings()">&#10003; &#20445;&#23384;</button>
+      <button class="btn btn-secondary" onclick="hideSettings()">&#21462;&#28040;</button>
+    </div>
+  </div>
+</div>
+</main>
+
+<script>
+// ── hash routing ──
+const routes = {home:'page-home',create:'page-create',library:'page-library',novel:'page-novel'};
+let currentNovelId = null;
+
+function navigate(page,param){
+  const hash = param ? `#/${page}/${param}` : `#/${page}`;
+  history.pushState(null,'',hash);
+  render();
+}
+
+function render(){
+  const hash = location.hash.replace('#/','').split('/');
+  const page = hash[0]||'home';
+  const param = hash[1]||null;
+
+  Object.values(routes).forEach(id=>document.getElementById(id).classList.remove('active'));
+  const target = routes[page];
+  if(target) document.getElementById(target).classList.add('active');
+
+  document.querySelectorAll('header nav a').forEach(a=>a.classList.remove('active'));
+  const nav = document.getElementById('nav-'+page);
+  if(nav) nav.classList.add('active');
+
+  if(page==='library') loadLibrary();
+  if(page==='novel' && param){ currentNovelId=param; loadNovel(param); }
+}
+
+window.addEventListener('popstate',render);
+window.addEventListener('DOMContentLoaded',function(){ render(); loadSettings(); });
+
+
+const S_PROVIDERS = {
+  openai: {base_url: "https://api.openai.com/v1", model: "gpt-4o-mini"},
+  deepseek: {base_url: "https://api.deepseek.com", model: "deepseek-chat"},
+  custom: {base_url: "", model: ""},
+};
+
+function loadSettings(){
+  var s = JSON.parse(localStorage.getItem("novel_settings") || "{}");
+  var el = document.getElementById("s-provider");
+  if(el) el.value = s.provider || "openai";
+  el = document.getElementById("s-key");
+  if(el) el.value = s.api_key || "";
+  el = document.getElementById("s-model");
+  if(el) el.value = s.model || S_PROVIDERS[s.provider]?.model || "gpt-4o-mini";
+  el = document.getElementById("s-base-url");
+  if(el) el.value = s.base_url || S_PROVIDERS[s.provider]?.base_url || "";
+}
+
+function showSettings(){ loadSettings(); document.getElementById("settings-overlay").classList.add("active"); }
+function hideSettings(){ document.getElementById("settings-overlay").classList.remove("active"); }
+
+function onProviderChange(){
+  var p = document.getElementById("s-provider").value;
+  var preset = S_PROVIDERS[p];
+  if(preset && p !== "custom"){
+    document.getElementById("s-model").value = preset.model;
+    document.getElementById("s-base-url").value = preset.base_url;
+  }
+}
+
+function saveSettings(){
+  localStorage.setItem("novel_settings", JSON.stringify({
+    provider: document.getElementById("s-provider").value,
+    api_key: document.getElementById("s-key").value,
+    model: document.getElementById("s-model").value,
+    base_url: document.getElementById("s-base-url").value,
+  }));
+  hideSettings();
+}
+
+function getSettingsHeaders(){
+  var s = JSON.parse(localStorage.getItem("novel_settings") || "{}");
+  var h = {};
+  if(s.api_key) h["X-API-Key"] = s.api_key;
+  if(s.model) h["X-Model"] = s.model;
+  if(s.base_url) h["X-Base-URL"] = s.base_url;
+  return h;
+}
+
+// ── create novel ──
+async function createNovel(){
+  const title = document.getElementById('novel-title').value;
+  const idea = document.getElementById('novel-idea').value;
+  if(!idea.trim()){ setStatus('请填写创意','error'); return; }
+  const btn = document.getElementById('btn-create');
+  btn.disabled=true; setStatus('正在生成设定...','info');
+  try{
+    const r = await fetch('/api/novels',{
+      method:'POST',
+      headers: Object.assign({'Content-Type':'application/json'}, getSettingsHeaders()),
+      body:JSON.stringify({title,idea})
+    });
+    if(!r.ok){ const e=await r.json(); throw new Error(e.detail||'请求失败'); }
+    const data = await r.json();
+    setStatus('生成成功！','ok');
+    setTimeout(()=>navigate('novel',data.id),600);
+  }catch(e){
+    setStatus('生成失败：'+e.message,'error');
+    btn.disabled=false;
+  }
+}
+function setStatus(msg,type){
+  const el=document.getElementById('create-status');
+  el.innerHTML=msg;el.style.color=type==='error'?'#ef4444':type==='ok'?'#22c55e':'var(--c-muted)';
+}
+
+// ── library ──
+async function loadLibrary(){
+  const grid=document.getElementById('library-grid');
+  try{
+    const r=await fetch('/api/novels');
+    const novels=await r.json();
+    if(!novels.length){
+      grid.innerHTML='<div class="empty-state"><div class="icon">&#128214;</div><h3>还没有小说</h3><p>点击上方「新小说」开始创作</p></div>';
+      return;
+    }
+    grid.innerHTML=novels.map(n=>`
+      <div class="novel-card" onclick="navigate('novel','${n.id}')">
+        <h4>${esc(n.title)}</h4>
+        <div class="meta">${n.created_at.slice(0,10)}</div>
+        <div class="preview">${esc(n.idea_preview||'')}${(n.idea_preview||'').length>=80?'...':''}</div>
+        <button class="delete-btn" onclick="event.stopPropagation();deleteNovelFromList('${n.id}')">删除</button>
+      </div>
+    `).join('');
+  }catch(e){grid.innerHTML='<div style="text-align:center;padding:40px;color:#ef4444">加载失败</div>';}
+}
+
+async function deleteNovelFromList(id){
+  if(!confirm('确定删除？'))return;
+  await fetch('/api/novels/'+id,{method:'DELETE'});
+  loadLibrary();
+}
+
+// ── novel detail ──
+let novelData=null;
+
+async function loadNovel(id){
+  currentNovelId = id;
+  editMode = false;
+  document.getElementById("edit-bar").style.display = "none";
+  try{
+    const r=await fetch('/api/novels/'+id);
+    novelData=await r.json();
+    document.getElementById('novel-title-display').textContent=novelData.title;
+    document.getElementById('novel-idea-display').textContent='创意：'+novelData.idea;
+    switchTab('world');
+  }catch(e){
+    document.getElementById('detail-content').innerHTML='<div style="color:#ef4444">加载失败</div>';
+  }
+}
+
+var currentTab = "world";
+function switchTab(tab){currentTab=tab;
+  document.querySelectorAll('#detail-tabs .tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  const el=document.getElementById('detail-content');
+  if(!novelData){el.innerHTML='';return;}
+  if(tab==='world') el.innerHTML=renderWorld(novelData.world_setting);
+  else if(tab==='characters') el.innerHTML=renderCharacters(novelData.characters);
+  else if(tab==='outline') el.innerHTML=editMode?renderOutline(novelData.outline):renderOutlineRead(novelData.outline);
+  else if(tab==='chapters') el.innerHTML=renderChapters(novelData.chapters);
+}
+
+function renderWorld(ws){
+  if(editMode && editData && editData.world_setting){
+    var ews = editData.world_setting;
+    return '<h2>&#127758; 世界观</h2>'
+      + '<div class="field"><div class="field-label">名称</div><input data-wf="name" value="'+esc(ews.name||"")+'" style="width:100%;padding:8px 10px;border:1px solid var(--c-border);border-radius:6px"></div>'
+      + '<div class="field"><div class="field-label">题材</div><input data-wf="genre" value="'+esc(ews.genre||"")+'" style="width:100%;padding:8px 10px;border:1px solid var(--c-border);border-radius:6px"></div>'
+      + '<div class="field"><div class="field-label">核心设定</div><textarea data-wf="premise" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc(ews.premise||"")+'</textarea></div>'
+      + '<div class="field"><div class="field-label">世界规则</div><textarea data-wf="rules" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc(ews.rules||"")+'</textarea></div>'
+      + '<div class="field"><div class="field-label">力量体系</div><textarea data-wf="power_system" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc(ews.power_system||"")+'</textarea></div>'
+      + '<div class="field"><div class="field-label">风格基调</div><input data-wf="tone" value="'+esc(ews.tone||"")+'" style="width:100%;padding:8px 10px;border:1px solid var(--c-border);border-radius:6px"></div>'
+      + '<div class="field"><div class="field-label">关键地点（每行一个）</div><textarea id="edit-locations" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc((ews.locations||[]).join("\n"))+'</textarea></div>'
+      + '<div class="field"><div class="field-label">势力（每行一个）</div><textarea id="edit-factions" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc((ews.factions||[]).join("\n"))+'</textarea></div>';
+  }
+  if(!ws) return '<p>暂无世界观设定</p>';
+  const fields=[
+    ['名称',ws.name],[,'题材',ws.genre],['核心设定',ws.premise],
+    ['世界规则',ws.rules],['力量体系',ws.power_system],['风格基调',ws.tone],
+  ];
+  let html='<h2>&#127758; 世界观</h2>'+
+    fields.map(([l,v])=>v?`<div class="field"><div class="field-label">${l}</div><div class="field-value">${esc(v)}</div></div>`:'').join('');
+  if(ws.locations&&ws.locations.length)
+    html+=`<div class="field"><div class="field-label">关键地点</div><div class="field-value">${ws.locations.map(l=>'• '+esc(l)).join('<br>')}</div></div>`;
+  if(ws.factions&&ws.factions.length)
+    html+=`<div class="field"><div class="field-label">势力</div><div class="field-value">${ws.factions.map(f=>'• '+esc(f)).join('<br>')}</div></div>`;
+  return html;
+}
+
+function renderCharacters(chars){
+  if(editMode && editData && editData.characters){
+    var ec = editData.characters;
+    if(!ec||!ec.length) ec=[{name:"",role:"",archetype:"",appearance:"",personality:"",background:"",motivation:"",abilities:"",flaws:"",arc:""}];
+    return '<h2>&#128100; 角色卡</h2>'
+      + '<p style="color:var(--c-muted);font-size:12px;margin-bottom:12px">修改后点击「保存」生效</p>'
+      + ec.map(function(c,i){return '<div class="char-item char-edit"><h4>角色 '+(i+1)+'</h4>'
+        + '<div class="field"><div class="field-label">姓名</div><input data-cf="name" value="'+esc(c.name||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
+        + '<div class="field"><div class="field-label">角色</div><input data-cf="role" value="'+esc(c.role||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
+        + '<div class="field"><div class="field-label">性格原型</div><input data-cf="archetype" value="'+esc(c.archetype||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
+        + '<div class="field"><div class="field-label">外貌</div><input data-cf="appearance" value="'+esc(c.appearance||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
+        + '<div class="field"><div class="field-label">性格</div><textarea data-cf="personality" rows="2" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc(c.personality||"")+'</textarea></div>'
+        + '<div class="field"><div class="field-label">背景</div><textarea data-cf="background" rows="2" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc(c.background||"")+'</textarea></div>'
+        + '<div class="field"><div class="field-label">动机</div><input data-cf="motivation" value="'+esc(c.motivation||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
+        + '<div class="field"><div class="field-label">能力</div><textarea data-cf="abilities" rows="2" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc(c.abilities||"")+'</textarea></div>'
+        + '<div class="field"><div class="field-label">缺陷</div><input data-cf="flaws" value="'+esc(c.flaws||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
+        + '<div class="field"><div class="field-label">成长弧线</div><textarea data-cf="arc" rows="2" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc(c.arc||"")+'</textarea></div>'
+        + '</div>';
+      }).join('');
+  }
+  if(!chars||!chars.length) return '<p>暂无角色设定</p>';
+  return '<h2>&#128100; 角色卡</h2>'+
+    chars.map(c=>{
+      const tags=[]
+      if(c.role) tags.push(c.role);
+      if(c.archetype) tags.push(c.archetype);
+      return `<div class="char-item">
+        <h4>${esc(c.name)} ${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</h4>
+        ${c.appearance?`<div style="font-size:13px;color:var(--c-muted);margin-bottom:6px">${esc(c.appearance)}</div>`:''}
+        <div class="field"><div class="field-label">性格</div><div class="field-value">${esc(c.personality||'')}</div></div>
+        <div class="field"><div class="field-label">背景</div><div class="field-value">${esc(c.background||'')}</div></div>
+        <div class="field"><div class="field-label">动机</div><div class="field-value">${esc(c.motivation||'')}</div></div>
+        <div class="field"><div class="field-label">能力</div><div class="field-value">${esc(c.abilities||'')}</div></div>
+        <div class="field"><div class="field-label">缺陷</div><div class="field-value">${esc(c.flaws||'')}</div></div>
+        <div class="field"><div class="field-label">成长弧线</div><div class="field-value">${esc(c.arc||'')}</div></div>
+      </div>`;
+    }).join('');
+}
+
+function renderOutline(outline){
+  var chapters = (novelData && novelData.chapters) || [];
+  var chStatus = {};
+  chapters.forEach(function(c,i){ if(c && c.trim()) chStatus[i]=true; });
+
+  if(editMode && editData && editData.outline){
+    var eol = editData.outline;
+    return '<h2>&#128221; 分章大纲</h2><p style="color:var(--c-muted);font-size:12px;margin-bottom:12px">修改后点击「保存」生效</p>'
+      + eol.map(function(ch,i){return '<div class="chapter-item ch-edit" data-cn="'+(i+1)+'">'
+        + '<h4>第'+(i+1)+'章</h4>'
+        + '<div class="field"><div class="field-label">标题</div><input data-of="title" value="'+esc(ch.title||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
+        + '<div class="field"><div class="field-label">梗概</div><input data-of="summary" value="'+esc(ch.summary||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
+        + '<div class="field"><div class="field-label">冲突</div><input data-of="conflict" value="'+esc(ch.conflict||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
+        + '<div class="field"><div class="field-label">钩子</div><input data-of="hook" value="'+esc(ch.hook||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
+        + '<div class="field"><div class="field-label">关键场景</div><textarea data-of="scenes" rows="3" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc((ch.key_scenes||[]).join("\n"))+'</textarea></div>'
+        + '<div class="field"><div class="field-label">登场角色</div><textarea data-of="chars" rows="2" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc((ch.characters_involved||[]).join("\n"))+'</textarea></div>'
+        + '<div style="margin-top:8px"><button class="btn btn-primary" onclick="generateSingleChapter('+i+')" id="gen-ch-'+i+'" style="font-size:12px;padding:6px 14px">⚡ 生成本章</button>'
+        + (chStatus[i]?' <span style="color:#22c55e;font-size:12px">✅ 已生成</span>':'')
+        + '</div></div>';
+      }).join('');
+  }
+  if(!outline||!outline.length) return '<p>暂无大纲</p>';
+  return '<h2>&#128221; 分章大纲</h2>'+
+    outline.map(ch=>`<div class="chapter-item">
+      <h4>第${ch.chapter_number}章：${esc(ch.title||'')}</h4>
+      <div class="meta">${esc(ch.summary||'')}</div>
+      <div class="field" style="margin-top:8px"><div class="field-label">冲突</div><div class="field-value">${esc(ch.conflict||'')}</div></div>
+      <div class="field"><div class="field-label">钩子</div><div class="field-value" style="color:var(--c-primary)">${esc(ch.hook||'')}</div></div>
+      ${ch.key_scenes?.length?`<div class="field"><div class="field-label">关键场景</div><div class="field-value">${ch.key_scenes.map(s=>'• '+esc(s)).join('<br>')}</div></div>`:''}
+      ${ch.characters_involved?.length?`<div class="field"><div class="field-label">登场角色</div><div class="field-value">${ch.characters_involved.join(' / ')}</div></div>`:''}
+    </div>`).join('');
+}
+
+async function deleteNovel(){
+  if(!currentNovelId||!confirm('确定删除这篇小说？')) return;
+  await fetch('/api/novels/'+currentNovelId,{method:'DELETE'});
+  navigate('library');
+}
+
+
+function renderOutlineRead(outline){
+  var chapters = (novelData && novelData.chapters) || [];
+  var chStatus = {};
+  chapters.forEach(function(c,i){ if(c && c.trim()) chStatus[i]=true; });
+  return '<h2>&#128221; 分章大纲</h2>'
+    + outline.map(function(ch,i){return '<div class="chapter-item">'
+      + '<h4>第'+ch.chapter_number+'章：'+esc(ch.title||"")+'</h4>'
+      + '<div class="meta">'+esc(ch.summary||"")+'</div>'
+      + '<div class="field" style="margin-top:8px"><div class="field-label">冲突</div><div class="field-value">'+esc(ch.conflict||"")+'</div></div>'
+      + '<div class="field"><div class="field-label">钩子</div><div class="field-value" style="color:var(--c-primary)">'+esc(ch.hook||"")+'</div></div>'
+      + (ch.key_scenes&&ch.key_scenes.length?'<div class="field"><div class="field-label">关键场景</div><div class="field-value">'+ch.key_scenes.map(function(s){return "• "+esc(s);}).join("<br>")+'</div></div>':'')
+      + (ch.characters_involved&&ch.characters_involved.length?'<div class="field"><div class="field-label">登场角色</div><div class="field-value">'+ch.characters_involved.join(" / ")+'</div></div>':'')
+      + '<div style="margin-top:10px"><button class="btn btn-primary" onclick="generateSingleChapter('+i+')" id="gen-ch-'+i+'" style="font-size:12px;padding:6px 14px">⚡ 生成本章</button>'
+      + (chStatus[i]?' <span style="color:#22c55e;font-size:12px;margin-left:8px">✅ 已生成</span>':'')
+      + '</div></div>';
+    }).join('');
+}
+
+function renderChapters(chapters){
+  if(!chapters||!chapters.length) return '<p style="color:var(--c-muted);text-align:center;padding:40px">没有章节，点击大纲中的“⚡生成本章”按钮开始写作</p>';
+  return '<h2>&#128214; 章节正文</h2>'+chapters.map(function(ch,i){
+    var display=ch.length>500?ch.slice(0,500)+'...<p style="color:var(--c-muted);font-size:12px;margin-top:4px">(剩余 '+ch.length+' 字)</p>':ch;
+    return '<div class="chapter-item"><div style="display:flex;justify-content:space-between;align-items:center"><h4>第 '+(i+1)+' 章</h4><button onclick="downloadChapter('+i+')" style="font-size:11px;padding:3px 8px;border:1px solid var(--c-border);border-radius:5px;background:none;cursor:pointer;color:var(--c-primary)">下载 TXT</button></div><div style="font-size:13px;margin-top:8px;line-height:1.8;white-space:pre-wrap">'+esc(display)+'</div></div>';
+  }).join('');
+}
+
+// --- edit mode ---
+var editMode = false;
+var editData = {};
+
+function enterEdit(){
+  editMode = true;
+  editData = JSON.parse(JSON.stringify(novelData));
+  document.getElementById("edit-bar").style.display = "flex";
+  switchTab(currentTab);
+}
+
+function cancelEdit(){
+  editMode = false;
+  document.getElementById("edit-bar").style.display = "none";
+  switchTab(currentTab);
+}
+
+async function saveEdit(){
+  var data = JSON.parse(JSON.stringify(editData));
+  var te = document.getElementById("edit-title");
+  var ie = document.getElementById("edit-idea");
+  if(te) data.title = te.value;
+  if(ie) data.idea = ie.value;
+
+  // collect world form
+  var wfInputs = document.querySelectorAll("[data-wf]");
+  if(wfInputs.length > 0){
+    data.world_setting = {};
+    wfInputs.forEach(function(el){ data.world_setting[el.dataset.wf] = el.value; });
+    var locs = document.getElementById("edit-locations");
+    var facs = document.getElementById("edit-factions");
+    if(locs) data.world_setting.locations = locs.value.split("\n").filter(Boolean);
+    if(facs) data.world_setting.factions = facs.value.split("\n").filter(Boolean);
+  }
+
+  // collect character forms
+  var charForms = document.querySelectorAll(".char-edit");
+  if(charForms.length > 0){
+    data.characters = [];
+    charForms.forEach(function(el){
+      data.characters.push({
+        name: el.querySelector("[data-cf='name']").value,
+        role: el.querySelector("[data-cf='role']").value,
+        archetype: el.querySelector("[data-cf='archetype']").value,
+        appearance: el.querySelector("[data-cf='appearance']").value,
+        personality: el.querySelector("[data-cf='personality']").value,
+        background: el.querySelector("[data-cf='background']").value,
+        motivation: el.querySelector("[data-cf='motivation']").value,
+        abilities: el.querySelector("[data-cf='abilities']").value,
+        flaws: el.querySelector("[data-cf='flaws']").value,
+        arc: el.querySelector("[data-cf='arc']").value,
+      });
+    });
+  }
+
+  // collect outline forms
+  var chForms = document.querySelectorAll(".ch-edit");
+  if(chForms.length > 0){
+    data.outline = [];
+    chForms.forEach(function(el){
+      data.outline.push({
+        chapter_number: parseInt(el.dataset.cn),
+        title: el.querySelector("[data-of='title']").value,
+        summary: el.querySelector("[data-of='summary']").value,
+        conflict: el.querySelector("[data-of='conflict']").value,
+        hook: el.querySelector("[data-of='hook']").value,
+        key_scenes: el.querySelector("[data-of='scenes']").value.split("\n").filter(Boolean),
+        characters_involved: el.querySelector("[data-of='chars']").value.split("\n").filter(Boolean).map(function(s){return s.trim();}),
+      });
+    });
+  }
+
+  try{
+    var r = await fetch("/api/novels/"+currentNovelId, {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(data),
+    });
+    if(!r.ok) throw new Error((await r.json()).detail || "保存失败");
+    editMode = false;
+    document.getElementById("edit-bar").style.display = "none";
+    await loadNovel(currentNovelId);
+  }catch(e){ alert("保存失败: "+e.message); }
+}
+
+async function generateSingleChapter(idx){
+  var btn = document.getElementById("gen-ch-"+idx);
+  if(btn){ btn.disabled = true; btn.textContent = "生成中..."; }
+  try{
+    var r = await fetch("/api/novels/"+currentNovelId+"/generate-chapter/"+idx, {method:"POST", headers: getSettingsHeaders()});
+    if(!r.ok) throw new Error((await r.json()).detail || "生成失败");
+    await loadNovel(currentNovelId);
+  }catch(e){ alert("生成失败: "+e.message); }
+  if(btn){ btn.disabled = false; btn.textContent = "⚡ 生成本章"; }
+}
+
+
+
+
+
+function downloadFullNovel(){
+  if(!novelData||!novelData.chapters||!novelData.chapters.length){alert("没有可下载的章节");return;}
+  var text = novelData.chapters.map(function(ch,i){return "第"+(i+1)+"章\n\n"+ch;}).join("\n\n---\n\n");
+  var blob = new Blob([text],{type:"text/plain;charset=utf-8"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a"); a.href = url;
+  a.download = (novelData.title||"小说")+".txt"; a.click(); URL.revokeObjectURL(url);
+}
+
+function downloadChapter(idx){
+  if(!novelData||!novelData.chapters||!novelData.chapters[idx]) return;
+  var blob = new Blob([novelData.chapters[idx]],{type:"text/plain;charset=utf-8"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a"); a.href = url;
+  a.download = (novelData.title||"小说")+"_第"+(idx+1)+"章.txt";
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function downloadFullNovel(){
+  if(!novelData||!novelData.chapters||!novelData.chapters.length){alert("没有可下载的章节");return;}
+  var text=novelData.chapters.map(function(ch,i){return "第"+(i+1)+"章\n\n"+ch;}).join("\n\n---\n\n");
+  var blob=new Blob([text],{type:"text/plain;charset=utf-8"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");a.href=url;
+  a.download=(novelData.title||"小说")+".txt";a.click();URL.revokeObjectURL(url);
+}
+function downloadChapter(i){
+  if(!novelData||!novelData.chapters||!novelData.chapters[i]) return;
+  var blob=new Blob([novelData.chapters[i]],{type:"text/plain;charset=utf-8"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");a.href=url;
+  a.download=(novelData.title||"小说")+"_第"+(i+1)+"章.txt";
+  a.click();URL.revokeObjectURL(url);
+}
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+</script>
+</body>
+</html>
