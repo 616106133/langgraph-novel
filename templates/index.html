@@ -158,6 +158,16 @@ main{flex:1;padding:32px 24px;max-width:1200px;margin:0 auto;width:100%}
 .modal-box input,.modal-box select{width:100%;padding:10px 12px;border:1px solid var(--c-border);border-radius:8px;font-size:14px;font-family:inherit;outline:none}
 .modal-box input:focus,.modal-box select:focus{border-color:var(--c-primary);box-shadow:0 0 0 3px rgba(79,70,229,.12)}
 .modal-box .hint{font-size:12px;color:var(--c-muted);margin-top:4px}
+
+.genre-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;margin-bottom:20px}
+.genre-opt{
+  padding:8px 16px;border-radius:8px;border:1px solid var(--c-border);
+  cursor:pointer;font-size:13px;transition:.15s;background:var(--c-surface);
+  font-family:inherit;user-select:none;
+}
+.genre-opt:hover{border-color:var(--c-primary);color:var(--c-primary)}
+.genre-opt.active{background:var(--c-primary);color:#fff;border-color:var(--c-primary)}
+#genre-desc{font-size:12px;color:var(--c-muted);margin:4px 0 0 0;line-height:1.5}
 </style>
 </head>
 <body>
@@ -167,6 +177,8 @@ main{flex:1;padding:32px 24px;max-width:1200px;margin:0 auto;width:100%}
   <nav>
     <a onclick="navigate('home')" id="nav-home">首页</a>
     <a onclick="navigate('library')" id="nav-library">小说库</a>
+    <a onclick="navigate('import')" id="nav-import">导入TXT</a>
+    <a onclick="navigate('trash')" id="nav-trash">回收站</a>
   <a onclick="showSettings()" id="nav-settings" style="font-size:18px;cursor:pointer;padding:4px 8px" title="&#35774;&#32622;">&#9881;</a></nav>
 </header>
 
@@ -187,6 +199,16 @@ main{flex:1;padding:32px 24px;max-width:1200px;margin:0 auto;width:100%}
       <h3>小说仓库</h3>
       <p>查看已有小说，浏览设定、角色和大纲</p>
     </div>
+    <div class="home-card" onclick="navigate('import')">
+      <div class="icon">&#128229;</div>
+      <h3>导入 TXT 小说</h3>
+      <p>把已下载的整本小说导回系统，自动拆章并生成可编辑大纲</p>
+    </div>
+    <div class="home-card" onclick="navigate('trash')">
+      <div class="icon">&#9851;</div>
+      <h3>小说回收站</h3>
+      <p>误删后可以在这里恢复，确认无用后再永久删除</p>
+    </div>
   </div>
 </div>
 
@@ -199,6 +221,23 @@ main{flex:1;padding:32px 24px;max-width:1200px;margin:0 auto;width:100%}
     <label>一句话创意</label>
     <textarea id="novel-idea" placeholder="描述小说的核心创意，比如：&#10;一个普通高中生意外绑定"诸天万界商城系统"，能用积分兑换漫威超能力，但每次兑换都会引来异次元怪物追杀。"></textarea>
     <div class="hint">创意越具体，生成的设定越精准。建议包含主角、核心冲突和独特设定。</div>
+    <label>小说流派</label>
+    <div class="genre-group">
+      <div class="genre-opt active" data-genre="urban" onclick="selectGenre(this)">都市类</div>
+      <div class="genre-opt" data-genre="wuxia" onclick="selectGenre(this)">武侠类</div>
+      <div class="genre-opt" data-genre="xianxia" onclick="selectGenre(this)">仙侠类</div>
+      <div class="genre-opt" data-genre="mystery" onclick="selectGenre(this)">推理/悬疑</div>
+      <div class="genre-opt" data-genre="romance" onclick="selectGenre(this)">青春恋爱</div>
+      <div class="genre-opt" data-genre="fanfic" onclick="selectGenre(this)">同人文</div>
+    </div>
+    <div id="genre-desc">现代都市为舞台，涵盖异能、系统、重生、职场、校园等子类。</div>
+    <div id="fanfic-block" style="display:none;margin-top:16px">
+      <label>原作名称</label>
+      <input id="fanfic-title" placeholder="例如：某部小说 / 某部动漫" maxlength="80">
+      <label style="margin-top:10px">原作设定摘要</label>
+      <textarea id="fanfic-summary" rows="5" placeholder="请写你希望沿用的原作世界观摘要、势力关系、时代背景、关键规则。不要粘贴大段原文，建议自己概括。"></textarea>
+      <div class="hint">同人文会根据你提供的摘要重建原作世界，不会直接复制原作正文或受版权保护的完整设定。</div>
+    </div>
     <div class="form-actions">
       <button class="btn btn-primary" id="btn-create" onclick="createNovel()">开始生成</button>
       <button class="btn btn-secondary" onclick="navigate('home')">取消</button>
@@ -207,17 +246,61 @@ main{flex:1;padding:32px 24px;max-width:1200px;margin:0 auto;width:100%}
   </div>
 </div>
 
+<!-- 导入 TXT -->
+<div class="page" id="page-import">
+  <h1 style="font-size:24px">导入 TXT 小说</h1>
+  <div class="form-card">
+    <label>小说标题</label>
+    <input id="import-title" placeholder="留空则使用“导入的小说”" maxlength="60">
+    <label>选择 TXT 文件</label>
+    <input type="file" id="import-file" accept=".txt,text/plain" onchange="readImportFile()" style="background:#fff">
+    <div class="hint">支持常见章节标题，如“第1章 标题”“第一章 标题”“【第1章 标题】”。</div>
+    <label>或直接粘贴全文</label>
+    <textarea id="import-text" rows="12" placeholder="把下载的整本小说 TXT 内容粘贴到这里"></textarea>
+    <label style="display:flex;align-items:center;gap:8px;font-weight:500;margin-top:14px">
+      <input type="checkbox" id="import-ai-reconstruct" checked style="width:auto"> 导入后用 AI 反向补全世界观、角色卡、大纲和剧情圣经
+    </label>
+    <div class="hint">会先保留完整正文，再根据正文样本重建小说档案；没有 API Key 时会自动退回基础导入。</div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="btn-import" onclick="importTxtNovel()">拆章并导入</button>
+      <button class="btn btn-secondary" onclick="navigate('library')">取消</button>
+    </div>
+    <div id="import-status" style="margin-top:16px"></div>
+  </div>
+</div>
+
 <!-- 小说库 -->
 <div class="page" id="page-library">
   <div style="display:flex;justify-content:space-between;align-items:center">
     <h1 style="font-size:24px">小说仓库</h1>
-    <button class="btn btn-primary" onclick="navigate('create')">+ 新小说</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary" onclick="navigate('import')">导入 TXT</button>
+      <button class="btn btn-primary" onclick="navigate('create')">+ 新小说</button>
+    </div>
   </div>
   <div id="library-grid" class="library-grid">
     <div class="empty-state">
       <div class="icon">&#128214;</div>
       <h3>还没有小说</h3>
       <p>点击上方「新小说」开始创作</p>
+    </div>
+  </div>
+</div>
+
+<!-- 回收站 -->
+<div class="page" id="page-trash">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div>
+      <h1 style="font-size:24px">小说回收站</h1>
+      <p style="color:var(--c-muted);font-size:13px;margin-top:4px">删除的小说会先保存在这里，恢复后回到小说库。</p>
+    </div>
+    <button class="btn btn-secondary" onclick="navigate('library')">返回小说库</button>
+  </div>
+  <div id="trash-grid" class="library-grid">
+    <div class="empty-state">
+      <div class="icon">&#9851;</div>
+      <h3>回收站为空</h3>
+      <p>删除小说后会出现在这里</p>
     </div>
   </div>
 </div>
@@ -237,9 +320,9 @@ main{flex:1;padding:32px 24px;max-width:1200px;margin:0 auto;width:100%}
       <button class="btn btn-secondary" onclick="cancelEdit()" style="font-size:13px">✕ 取消</button>
     </div>
     <button onclick="downloadFullNovel()" id="btn-download" style="font-size:11px;padding:3px 8px;border:1px solid var(--c-border);border-radius:5px;background:none;cursor:pointer;color:var(--c-primary)">下载 TXT</button>
+      <button class="btn btn-primary" onclick="showAssistUpdate()" id="btn-ai-update" style="font-size:13px">AI 辅助更新</button>
       <button class="btn btn-secondary" onclick="enterEdit()" id="btn-edit" style="font-size:13px">✎ 编辑</button>
     </div>
-  <p id="novel-idea-display" style="color:var(--c-muted);font-size:13px;margin-bottom:8px"></p>
   <div class="detail-layout">
     <div class="detail-sidebar" id="detail-tabs">
       <div class="tab active" data-tab="world" onclick="switchTab('world')">
@@ -251,8 +334,14 @@ main{flex:1;padding:32px 24px;max-width:1200px;margin:0 auto;width:100%}
       <div class="tab" data-tab="outline" onclick="switchTab('outline')">
         &#128221; 大纲
       </div>
+      <div class="tab" data-tab="bible" onclick="switchTab('bible')">
+        &#128220; 剧情圣经
+      </div>
       <div class="tab" data-tab="chapters" onclick="switchTab('chapters')">
         &#128214; 章节
+      </div>
+      <div class="tab" data-tab="audit" onclick="switchTab('audit')">
+        &#128269; 审稿
       </div>
     </div>
     <div class="detail-main" id="detail-content">
@@ -286,11 +375,49 @@ main{flex:1;padding:32px 24px;max-width:1200px;margin:0 auto;width:100%}
     </div>
   </div>
 </div>
+
+<div class="modal-overlay" id="assist-overlay">
+  <div class="modal-box">
+    <h3>AI 辅助更新</h3>
+    <label>更新范围</label>
+    <select id="assist-target">
+      <option value="all">全部核心设定</option>
+      <option value="world">世界观</option>
+      <option value="characters">修改角色卡</option>
+      <option value="characters_new">新增角色卡</option>
+      <option value="outline">修改篇章 / 节奏 / 章节大纲</option>
+      <option value="volume_new">新增篇章大纲</option>
+      <option value="volume_delete">删除篇章大纲</option>
+      <option value="outline_new">新增章节大纲</option>
+      <option value="bible">剧情圣经</option>
+    </select>
+    <label>修改方向</label>
+    <textarea id="assist-instructions" rows="5" style="width:100%;padding:10px 12px;border:1px solid var(--c-border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;resize:vertical" placeholder="例如：新增一个隐藏反派角色卡；新建第6-10章章节大纲；把世界观改得更悬疑；重做前10章节奏，增加反派压迫感。"></textarea>
+    <div class="hint">写“新增 / 新建 / 添加”时，AI 会尽量追加新角色卡或新大纲；写“重做 / 替换”时，AI 会更倾向于覆盖对应部分。</div>
+    <div id="assist-status" style="font-size:13px;color:var(--c-muted);margin-top:12px"></div>
+    <div class="form-actions" style="margin-top:24px">
+      <button class="btn btn-primary" onclick="submitAssistUpdate()" id="assist-submit">开始更新</button>
+      <button class="btn btn-secondary" onclick="hideAssistUpdate()">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="character-preview-overlay">
+  <div class="modal-box" style="max-width:760px">
+    <h3>角色卡修改预览</h3>
+    <div class="hint" style="margin-bottom:14px">保存前先看一眼差异，确认后才会真正写入。</div>
+    <div id="character-preview-body" style="max-height:58vh;overflow:auto;border:1px solid var(--c-border);border-radius:10px;padding:14px;background:var(--c-surface)"></div>
+    <div class="form-actions" style="margin-top:20px">
+      <button class="btn btn-primary" onclick="confirmCharacterPreview()">确认保存</button>
+      <button class="btn btn-secondary" onclick="hideCharacterPreview()">取消</button>
+    </div>
+  </div>
+</div>
 </main>
 
 <script>
 // ── hash routing ──
-const routes = {home:'page-home',create:'page-create',library:'page-library',novel:'page-novel'};
+const routes = {home:'page-home',create:'page-create',import:'page-import',library:'page-library',trash:'page-trash',novel:'page-novel'};
 let currentNovelId = null;
 
 function navigate(page,param){
@@ -313,11 +440,12 @@ function render(){
   if(nav) nav.classList.add('active');
 
   if(page==='library') loadLibrary();
+  if(page==='trash') loadTrash();
   if(page==='novel' && param){ currentNovelId=param; loadNovel(param); }
 }
 
 window.addEventListener('popstate',render);
-window.addEventListener('DOMContentLoaded',function(){ render(); loadSettings(); });
+window.addEventListener('DOMContentLoaded',function(){ render(); loadSettings(); resumeCreateJob(); });
 
 
 const S_PROVIDERS = {
@@ -369,31 +497,159 @@ function getSettingsHeaders(){
   return h;
 }
 
+async function readError(r, fallback){
+  var text = await r.text();
+  if(!text) return fallback || "请求失败";
+  try{
+    var data = JSON.parse(text);
+    return data.detail || data.error || fallback || "请求失败";
+  }catch(e){
+    return text.slice(0, 500) || fallback || "请求失败";
+  }
+}
+
 // ── create novel ──
+var selectedGenre = 'urban';
+var genreDescs = {
+  urban:'现代都市为舞台，涵盖异能、系统、重生、职场、校园等子类。',
+  wuxia:'古代或架空江湖世界，以内功、门派、武林争霸为核心。',
+  xianxia:'以修真修仙为核心，境界突破、渡劫飞升、仙魔之争。',
+  mystery:'以解谜破案为核心，包含本格推理、悬疑惊悚、都市怪谈等。',
+  romance:'以校园或青春为舞台，聚焦情感发展和人际关系。',
+  fanfic:'主角进入某个已有小说或动漫世界，在原作世界里展开新的故事。',
+};
+function selectGenre(el){
+  document.querySelectorAll('.genre-opt').forEach(function(g){g.classList.remove('active');});
+  el.classList.add('active');
+  selectedGenre = el.dataset.genre;
+  document.getElementById('genre-desc').textContent = genreDescs[selectedGenre];
+  var fb = document.getElementById('fanfic-block');
+  if(fb) fb.style.display = selectedGenre === 'fanfic' ? 'block' : 'none';
+}
 async function createNovel(){
   const title = document.getElementById('novel-title').value;
   const idea = document.getElementById('novel-idea').value;
+  const sourceTitleEl = document.getElementById('fanfic-title');
+  const sourceSummaryEl = document.getElementById('fanfic-summary');
   if(!idea.trim()){ setStatus('请填写创意','error'); return; }
+  if(selectedGenre === 'fanfic' && !(sourceTitleEl && sourceTitleEl.value.trim()) && !(sourceSummaryEl && sourceSummaryEl.value.trim())){
+    setStatus('同人文请填写原作名称或设定摘要','error');
+    return;
+  }
   const btn = document.getElementById('btn-create');
-  btn.disabled=true; setStatus('正在生成设定...','info');
+  btn.disabled=true; btn.textContent='生成中...'; setStatus('正在提交生成任务...','info');
   try{
     const r = await fetch('/api/novels',{
       method:'POST',
       headers: Object.assign({'Content-Type':'application/json'}, getSettingsHeaders()),
-      body:JSON.stringify({title,idea})
+      body:JSON.stringify({
+        title,
+        idea,
+        genre:selectedGenre,
+        source_title: sourceTitleEl ? sourceTitleEl.value : "",
+        source_summary: sourceSummaryEl ? sourceSummaryEl.value : "",
+      })
     });
     if(!r.ok){ const e=await r.json(); throw new Error(e.detail||'请求失败'); }
     const data = await r.json();
-    setStatus('生成成功！','ok');
-    setTimeout(()=>navigate('novel',data.id),600);
+    localStorage.setItem('createJobId', data.job_id);
+    pollCreateJob(data.job_id);
   }catch(e){
     setStatus('生成失败：'+e.message,'error');
-    btn.disabled=false;
+    btn.disabled=false; btn.textContent='开始生成';
   }
 }
+
+async function pollCreateJob(jobId){
+  const btn = document.getElementById('btn-create');
+  try{
+    const r = await fetch('/api/create-jobs/'+jobId);
+    const job = await r.json();
+    if(job.status === 'done'){
+      localStorage.removeItem('createJobId');
+      setStatus('生成成功，正在打开...','ok');
+      if(btn){ btn.disabled=false; btn.textContent='开始生成'; }
+      setTimeout(()=>navigate('novel',job.novel_id),500);
+      return;
+    }
+    if(job.status === 'error' || job.status === 'missing'){
+      localStorage.removeItem('createJobId');
+      setStatus(job.error || job.message || '生成失败','error');
+      if(btn){ btn.disabled=false; btn.textContent='开始生成'; }
+      return;
+    }
+    if(btn){ btn.disabled=true; btn.textContent='生成中...'; }
+    setStatus((job.message || '正在生成设定...') + ' 刷新页面后会自动恢复进度。','info');
+    setTimeout(function(){ pollCreateJob(jobId); }, 2000);
+  }catch(e){
+    setStatus('正在等待后端响应，稍后自动重试...','info');
+    setTimeout(function(){ pollCreateJob(jobId); }, 3000);
+  }
+}
+
+function resumeCreateJob(){
+  const jobId = localStorage.getItem('createJobId');
+  if(!jobId) return;
+  const page = location.hash.replace('#/','').split('/')[0] || 'home';
+  if(page !== 'create') return;
+  const btn = document.getElementById('btn-create');
+  if(btn){ btn.disabled=true; btn.textContent='生成中...'; }
+  pollCreateJob(jobId);
+}
+
 function setStatus(msg,type){
   const el=document.getElementById('create-status');
   el.innerHTML=msg;el.style.color=type==='error'?'#ef4444':type==='ok'?'#22c55e':'var(--c-muted)';
+}
+
+function setImportStatus(msg,type){
+  const el=document.getElementById('import-status');
+  if(!el) return;
+  el.innerHTML=msg;
+  el.style.color=type==='error'?'#ef4444':type==='ok'?'#22c55e':'var(--c-muted)';
+}
+
+function readImportFile(){
+  const file = document.getElementById('import-file').files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(){
+    document.getElementById('import-text').value = reader.result || '';
+    if(!document.getElementById('import-title').value.trim()){
+      document.getElementById('import-title').value = file.name.replace(/\.txt$/i,'');
+    }
+    setImportStatus('已读取文件：'+file.name,'ok');
+  };
+  reader.onerror = function(){ setImportStatus('读取文件失败，请直接粘贴 TXT 内容。','error'); };
+  reader.readAsText(file, 'utf-8');
+}
+
+async function importTxtNovel(){
+  const title = document.getElementById('import-title').value;
+  const text = document.getElementById('import-text').value;
+  const aiReconstruct = document.getElementById('import-ai-reconstruct')?.checked !== false;
+  if(!text.trim()){ setImportStatus('请先选择 TXT 文件或粘贴正文','error'); return; }
+  const btn = document.getElementById('btn-import');
+  if(btn){ btn.disabled = true; btn.textContent = aiReconstruct ? 'AI 建档中...' : '导入中...'; }
+  setImportStatus(aiReconstruct ? '正在拆分章节，并根据正文重建世界观、角色卡、大纲和剧情圣经...' : '正在拆分章节并写入小说库...','info');
+  try{
+    const r = await fetch('/api/import-txt', {
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'}, getSettingsHeaders()),
+      body:JSON.stringify({title:title, text:text, genre:selectedGenre || '', ai_reconstruct: aiReconstruct}),
+    });
+    if(!r.ok){ const e = await r.json(); throw new Error(e.detail || '导入失败'); }
+    const data = await r.json();
+    var msg = '导入成功，共 '+data.chapter_count+' 章';
+    if(aiReconstruct && data.reconstructed) msg += '，AI 档案已重建';
+    if(aiReconstruct && !data.reconstructed) msg += '，但 AI 建档失败，已保留基础导入';
+    setImportStatus(msg+'，正在打开...','ok');
+    document.getElementById('import-text').value = '';
+    setTimeout(function(){ navigate('novel', data.id); }, 500);
+  }catch(e){
+    setImportStatus('导入失败：'+e.message,'error');
+  }
+  if(btn){ btn.disabled = false; btn.textContent = '拆章并导入'; }
 }
 
 // ── library ──
@@ -418,9 +674,51 @@ async function loadLibrary(){
 }
 
 async function deleteNovelFromList(id){
-  if(!confirm('确定删除？'))return;
+  if(!confirm('确定把这篇小说移入回收站？'))return;
   await fetch('/api/novels/'+id,{method:'DELETE'});
   loadLibrary();
+}
+
+async function loadTrash(){
+  const grid=document.getElementById('trash-grid');
+  try{
+    const r=await fetch('/api/deleted-novels');
+    const novels=await r.json();
+    if(!novels.length){
+      grid.innerHTML='<div class="empty-state"><div class="icon">&#9851;</div><h3>回收站为空</h3><p>删除小说后会出现在这里</p></div>';
+      return;
+    }
+    grid.innerHTML=novels.map(function(n){
+      var deleted = n.deleted_at ? n.deleted_at.slice(0,16).replace('T',' ') : '';
+      return '<div class="novel-card" style="cursor:default">'
+        + '<h4>'+esc(n.title)+'</h4>'
+        + '<div class="meta">删除时间：'+esc(deleted)+'</div>'
+        + '<div class="preview">'+esc(n.idea_preview||'')+((n.idea_preview||'').length>=80?'...':'')+'</div>'
+        + '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;flex-wrap:wrap">'
+        + '<button class="btn btn-primary" onclick="restoreDeletedNovel(\''+esc(n.file)+'\')" style="font-size:13px;padding:7px 14px">恢复</button>'
+        + '<button class="delete-btn" onclick="purgeDeletedNovel(\''+esc(n.file)+'\')">永久删除</button>'
+        + '</div></div>';
+    }).join('');
+  }catch(e){grid.innerHTML='<div style="text-align:center;padding:40px;color:#ef4444">加载回收站失败</div>';}
+}
+
+async function restoreDeletedNovel(file){
+  try{
+    var r = await fetch('/api/deleted-novels/'+encodeURIComponent(file)+'/restore', {method:'POST'});
+    if(!r.ok) throw new Error((await r.json()).detail || '恢复失败');
+    var data = await r.json();
+    alert('已恢复到小说库');
+    navigate('novel', data.id);
+  }catch(e){ alert('恢复失败: '+e.message); }
+}
+
+async function purgeDeletedNovel(file){
+  if(!confirm('确定永久删除？这个操作无法从回收站恢复。')) return;
+  try{
+    var r = await fetch('/api/deleted-novels/'+encodeURIComponent(file), {method:'DELETE'});
+    if(!r.ok) throw new Error((await r.json()).detail || '永久删除失败');
+    loadTrash();
+  }catch(e){ alert('永久删除失败: '+e.message); }
 }
 
 // ── novel detail ──
@@ -434,8 +732,8 @@ async function loadNovel(id){
     const r=await fetch('/api/novels/'+id);
     novelData=await r.json();
     document.getElementById('novel-title-display').textContent=novelData.title;
-    document.getElementById('novel-idea-display').textContent='创意：'+novelData.idea;
     switchTab('world');
+    resumeBatchProgress();
   }catch(e){
     document.getElementById('detail-content').innerHTML='<div style="color:#ef4444">加载失败</div>';
   }
@@ -448,8 +746,90 @@ function switchTab(tab){currentTab=tab;
   if(!novelData){el.innerHTML='';return;}
   if(tab==='world') el.innerHTML=renderWorld(novelData.world_setting);
   else if(tab==='characters') el.innerHTML=renderCharacters(novelData.characters);
-  else if(tab==='outline') el.innerHTML=editMode?renderOutline(novelData.outline):renderOutlineRead(novelData.outline);
+  else if(tab==='outline') el.innerHTML=renderOutlineTab();
+  else if(tab==='bible') el.innerHTML=renderStoryBible(novelData.story_bible);
   else if(tab==='chapters') el.innerHTML=renderChapters(novelData.chapters);
+  else if(tab==='audit') el.innerHTML=renderAudit(novelData.audit_report);
+}
+
+// 大纲页：篇章大纲 / 章节大纲 子标签
+var outlineSubTab = 'volume'
+function switchOutlineSub(sub){
+  // 编辑态切换前，先把当前表单内容同步进 editData，避免丢失
+  if(editMode && typeof syncOutlineFromDOM==='function') syncOutlineFromDOM();
+  outlineSubTab = sub;
+  document.getElementById('detail-content').innerHTML = renderOutlineTab();
+}
+
+function outlineSubTabsBar(){
+  function tab(id,label){
+    var active = outlineSubTab===id;
+    return '<button onclick="switchOutlineSub(\''+id+'\')" style="'
+      + 'font-size:14px;padding:8px 18px;border:none;cursor:pointer;border-radius:8px;'
+      + (active?'background:var(--c-primary);color:#fff;font-weight:600':'background:none;color:var(--c-muted)')
+      + '">'+label+'</button>';
+  }
+  return '<div style="display:inline-flex;gap:4px;background:var(--c-bg);padding:4px;border-radius:10px;margin-bottom:16px;border:1px solid var(--c-border)">'
+    + tab('volume','📖 篇章大纲') + tab('pacing','⏱ 节奏段落') + tab('chapter','📑 章节大纲') + '</div>';
+}
+
+function renderOutlineTab(){
+  var head = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap"><h2 style="margin:0">&#128221; 大纲</h2>'+outlineSubTabsBar()+'</div>';
+  if(outlineSubTab==='volume') return head + renderVolumeSection();
+  if(outlineSubTab==='pacing') return head + renderPacingSection(novelData.pacing_outline);
+  return head + (editMode ? renderOutline(novelData.outline) : renderOutlineRead(novelData.outline));
+}
+
+// 篇章大纲区（读/编辑两态）
+function renderVolumeSection(){
+  var vols = getVolumeOutlines(editMode && editData ? editData : novelData);
+  if(editMode && editData){
+    return '<p style="color:var(--c-muted);font-size:12px;margin-bottom:12px">修改后点击「保存」生效</p>'
+      + '<div style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap">'
+      + '<button class="btn btn-secondary" onclick="addVolumeOutline()" style="font-size:13px;padding:7px 14px">+ 新增篇章</button>'
+      + '</div>'
+      + renderVolumeEditList(vols);
+  }
+  var cards = renderVolumeCardList(vols);
+  return cards || '<p style="color:var(--c-muted);padding:20px">暂无篇章大纲。这可能是较早创建的小说；点击「编辑」可手动补充，或重新创建小说自动生成。</p>';
+}
+
+function renderPacingSection(beats){
+  if(!beats || !beats.length) return '<p style="color:var(--c-muted);padding:20px">暂无节奏段落。新建小说或续写大纲后会自动补齐。</p>';
+  return '<div style="display:grid;gap:12px;margin-top:8px">'
+    + beats.map(function(b){return '<div class="chapter-item">'
+      + '<h4>'+esc(b.name||'节奏段')+' <span style="font-weight:400;color:var(--c-muted);font-size:12px">第 '+(b.chapter_start||'?')+'-'+(b.chapter_end||'?')+' 章</span></h4>'
+      + '<div class="field"><div class="field-label">叙事作用</div><div class="field-value">'+esc(b.purpose||'')+'</div></div>'
+      + '<div class="field"><div class="field-label">关键转折</div><div class="field-value">'+esc(b.major_turning_point||'')+'</div></div>'
+      + '<div class="field"><div class="field-label">张力目标</div><div class="field-value">'+esc(b.tension_goal||'')+'</div></div>'
+      + '</div>';}).join('')
+    + '</div>';
+}
+
+function renderStoryBible(bible){
+  bible = bible || {};
+  function listBlock(title, items){
+    if(!items || !items.length) return '';
+    return '<div class="chapter-item"><h4>'+title+'</h4>'
+      + items.map(function(x){
+        if(typeof x === 'object'){
+          return '<div class="field-value" style="margin-bottom:6px">'+Object.keys(x).map(function(k){return '<b>'+esc(k)+'</b>：'+esc(x[k]||'');}).join('　')+'</div>';
+        }
+        return '<div class="field-value">• '+esc(x)+'</div>';
+      }).join('')
+      + '</div>';
+  }
+  var html = '<h2>&#128220; 剧情圣经</h2>';
+  html += bible.last_chapter_summary ? '<div class="field"><div class="field-label">上一章摘要</div><div class="field-value">'+esc(bible.last_chapter_summary)+'</div></div>' : '';
+  html += bible.continuity_notes ? '<div class="field"><div class="field-label">连续性备注</div><div class="field-value">'+esc(bible.continuity_notes)+'</div></div>' : '';
+  html += listBlock('时间线', bible.timeline);
+  html += listBlock('章节事件账本', bible.chapter_events);
+  html += listBlock('重复记忆黑名单', bible.blacklist);
+  html += listBlock('人物状态', bible.character_states);
+  html += listBlock('未回收伏笔', bible.open_threads);
+  html += listBlock('已回收伏笔', bible.resolved_threads);
+  html += listBlock('地点与重要物件', bible.locations);
+  return html === '<h2>&#128220; 剧情圣经</h2>' ? html + '<p style="color:var(--c-muted);padding:20px">暂无剧情记忆。生成章节后会自动更新。</p>' : html;
 }
 
 function renderWorld(ws){
@@ -482,10 +862,10 @@ function renderWorld(ws){
 function renderCharacters(chars){
   if(editMode && editData && editData.characters){
     var ec = editData.characters;
-    if(!ec||!ec.length) ec=[{name:"",role:"",archetype:"",appearance:"",personality:"",background:"",motivation:"",abilities:"",flaws:"",arc:""}];
-    return '<h2>&#128100; 角色卡</h2>'
-      + '<p style="color:var(--c-muted);font-size:12px;margin-bottom:12px">修改后点击「保存」生效</p>'
-      + ec.map(function(c,i){return '<div class="char-item char-edit"><h4>角色 '+(i+1)+'</h4>'
+    if(!ec||!ec.length) ec=[];
+    var charHtml = '<h2>&#128100; 角色卡</h2>'
+      + '<p style="color:var(--c-muted);font-size:12px;margin-bottom:12px">修改后点击「保存」生效</p>' + '<button class="btn btn-secondary" onclick="addCharacter()" style="font-size:13px;padding:6px 16px;margin-bottom:14px">添加角色</button>'
+      + ec.map(function(c,i){return '<div class="char-item char-edit" id="char-'+i+'"><div style="display:flex;justify-content:space-between;align-items:center"><h4>角色 '+(i+1)+'</h4><button onclick="removeCharacter('+i+')" style="font-size:11px;border:none;background:none;color:#ef4444;cursor:pointer">删除</button></div>'
         + '<div class="field"><div class="field-label">姓名</div><input data-cf="name" value="'+esc(c.name||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
         + '<div class="field"><div class="field-label">角色</div><input data-cf="role" value="'+esc(c.role||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
         + '<div class="field"><div class="field-label">性格原型</div><input data-cf="archetype" value="'+esc(c.archetype||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
@@ -497,25 +877,94 @@ function renderCharacters(chars){
         + '<div class="field"><div class="field-label">缺陷</div><input data-cf="flaws" value="'+esc(c.flaws||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
         + '<div class="field"><div class="field-label">成长弧线</div><textarea data-cf="arc" rows="2" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc(c.arc||"")+'</textarea></div>'
         + '</div>';
-      }).join('');
+      }).join('') + '<div style="margin-top:12px"><button class="btn btn-secondary" onclick="addCharacter()" style="font-size:13px;padding:6px 16px">+ 添加角色</button></div>';
+    return charHtml;
   }
   if(!chars||!chars.length) return '<p>暂无角色设定</p>';
-  return '<h2>&#128100; 角色卡</h2>'+
+  var charHtml = '<h2>&#128100; 角色卡</h2>'+
     chars.map(c=>{
       const tags=[]
       if(c.role) tags.push(c.role);
       if(c.archetype) tags.push(c.archetype);
       return `<div class="char-item">
-        <h4>${esc(c.name)} ${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</h4>
-        ${c.appearance?`<div style="font-size:13px;color:var(--c-muted);margin-bottom:6px">${esc(c.appearance)}</div>`:''}
+        <h4>${esc(c.name||"")} ${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</h4>
+        ${c.appearance?`<div style="font-size:13px;color:var(--c-muted);margin-bottom:6px">${esc(c.appearance||"")}</div>`:''}
         <div class="field"><div class="field-label">性格</div><div class="field-value">${esc(c.personality||'')}</div></div>
         <div class="field"><div class="field-label">背景</div><div class="field-value">${esc(c.background||'')}</div></div>
         <div class="field"><div class="field-label">动机</div><div class="field-value">${esc(c.motivation||'')}</div></div>
         <div class="field"><div class="field-label">能力</div><div class="field-value">${esc(c.abilities||'')}</div></div>
         <div class="field"><div class="field-label">缺陷</div><div class="field-value">${esc(c.flaws||'')}</div></div>
         <div class="field"><div class="field-label">成长弧线</div><div class="field-value">${esc(c.arc||'')}</div></div>
-      </div>`;
+     </div>`;
     }).join('');
+    return charHtml;
+}
+
+// ── 篇章大纲卡片（读态）──
+function getVolumeOutlines(data){
+  data = data || {};
+  if(Array.isArray(data.volume_outlines) && data.volume_outlines.length) return data.volume_outlines;
+  if(data.volume_outline && Object.keys(data.volume_outline).length) return [data.volume_outline];
+  return [];
+}
+
+function syncPrimaryVolume(data){
+  data.volume_outlines = getVolumeOutlines(data);
+  data.volume_outline = data.volume_outlines[0] || {};
+  return data;
+}
+
+function renderVolumeCardList(vols){
+  return (vols || []).map(function(vol,i){ return renderVolumeCard(vol, i); }).join('');
+}
+
+function renderVolumeCard(vol){
+  if(!vol || !vol.name) return '';
+  var ev = (vol.key_events&&vol.key_events.length)
+    ? '<div class="field"><div class="field-label">关键事件</div><div class="field-value">'+vol.key_events.map(function(e){return '• '+esc(e);}).join('<br>')+'</div></div>' : '';
+  return '<div class="chapter-item" style="border-left:3px solid var(--c-primary);background:var(--c-bg)">'
+    + '<h4 style="color:var(--c-primary)">📖 '+esc(vol.name||'')+'　<span style="font-weight:400;color:var(--c-muted);font-size:12px">第 '+(vol.chapter_start||'?')+'-'+(vol.chapter_end||'?')+' 章</span></h4>'
+    + '<div class="field" style="margin-top:6px"><div class="field-label">整体走向</div><div class="field-value">'+esc(vol.arc||'')+'</div></div>'
+    + '<div class="field"><div class="field-label">核心矛盾</div><div class="field-value">'+esc(vol.core_conflict||'')+'</div></div>'
+    + '<div class="field"><div class="field-label">高潮</div><div class="field-value">'+esc(vol.climax||'')+'</div></div>'
+    + ev + '</div>';
+}
+
+// ── 篇章大纲卡片（编辑态）──
+function renderVolumeEditList(vols){
+  if(!vols || !vols.length) vols = [{}];
+  return vols.map(function(vol,i){ return renderVolumeEdit(vol, i); }).join('');
+}
+
+function renderVolumeEdit(vol, idx){
+  vol = vol || {};
+  var st='width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px';
+  return '<div class="chapter-item vol-edit" data-vol-idx="'+idx+'" style="border-left:3px solid var(--c-primary);background:var(--c-bg)">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'
+    + '<h4 style="color:var(--c-primary)">📖 篇章大纲 '+(idx+1)+'</h4>'
+    + '<button onclick="removeVolumeOutline('+idx+')" style="font-size:11px;border:none;background:none;color:#ef4444;cursor:pointer">删除</button></div>'
+    + '<div class="field"><div class="field-label">篇章名称</div><input data-vf="name" value="'+esc(vol.name||'')+'" style="'+st+'"></div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<div class="field" style="flex:1"><div class="field-label">起始章</div><input data-vf="chapter_start" type="number" value="'+(vol.chapter_start||1)+'" style="'+st+'"></div>'
+    + '<div class="field" style="flex:1"><div class="field-label">结束章</div><input data-vf="chapter_end" type="number" value="'+(vol.chapter_end||40)+'" style="'+st+'"></div></div>'
+    + '<div class="field"><div class="field-label">整体走向</div><textarea data-vf="arc" rows="3" style="'+st+';font-family:inherit">'+esc(vol.arc||'')+'</textarea></div>'
+    + '<div class="field"><div class="field-label">核心矛盾</div><input data-vf="core_conflict" value="'+esc(vol.core_conflict||'')+'" style="'+st+'"></div>'
+    + '<div class="field"><div class="field-label">高潮</div><input data-vf="climax" value="'+esc(vol.climax||'')+'" style="'+st+'"></div>'
+    + '<div class="field"><div class="field-label">关键事件（每行一个）</div><textarea data-vf="key_events" rows="4" style="'+st+';font-family:inherit">'+esc((vol.key_events||[]).join("\n"))+'</textarea></div>'
+    + '</div>';
+}
+
+// ── AI 续写 / 手动添加 章节大纲的按钮区 ──
+function outlineActionsBar(){
+  return '<div style="margin:14px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    + '<input type="number" id="expand-count" value="5" min="1" max="20" style="width:64px;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px">'
+    + '<button class="btn btn-primary" onclick="expandOutline()" id="expand-btn" style="font-size:13px;padding:8px 16px">✨ AI 续写章节大纲</button>'
+    + (editMode?'<button class="btn btn-secondary" onclick="addOutlineChapter()" style="font-size:13px;padding:8px 16px">+ 手动添加空白章</button>':'')
+    + '<button class="btn btn-secondary" onclick="toggleOutlineSelectMode()" id="outline-select-btn" style="font-size:13px;padding:8px 16px">'+(outlineSelectMode?'退出多选':'多选删除')+'</button>'
+    + '<button class="btn btn-secondary" onclick="selectAllOutlineChapters()" id="outline-select-all-btn" style="font-size:13px;padding:8px 16px;display:'+(outlineSelectMode?'inline-block':'none')+'">全选大纲</button>'
+    + '<button class="btn btn-secondary" onclick="clearOutlineSelection()" id="outline-clear-btn" style="font-size:13px;padding:8px 16px;display:'+(outlineSelectMode?'inline-block':'none')+'">清空选择</button>'
+    + '<button class="btn btn-primary" onclick="deleteSelectedOutlines()" id="outline-delete-selected-btn" style="font-size:13px;padding:8px 16px;display:'+(outlineSelectMode?'inline-block':'none')+';background:#ef4444">删除所选</button>'
+    + '</div>';
 }
 
 function renderOutline(outline){
@@ -525,16 +974,20 @@ function renderOutline(outline){
 
   if(editMode && editData && editData.outline){
     var eol = editData.outline;
-    return '<h2>&#128221; 分章大纲</h2><p style="color:var(--c-muted);font-size:12px;margin-bottom:12px">修改后点击「保存」生效</p>'
+    return '<p style="color:var(--c-muted);font-size:12px;margin:12px 0">修改后点击「保存」生效</p>'
+      + outlineActionsBar()
       + eol.map(function(ch,i){return '<div class="chapter-item ch-edit" data-cn="'+(i+1)+'">'
-        + '<h4>第'+(i+1)+'章</h4>'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">'
+        + '<label class="outline-select-control" style="display:'+(outlineSelectMode?'inline-flex':'none')+';font-size:13px;color:var(--c-muted);align-items:center;gap:6px"><input type="checkbox" class="outline-delete-check" value="'+i+'" onchange="updateOutlineDeleteButton()"> 选择</label>'
+        + '<h4 style="flex:1">第'+(i+1)+'章</h4>'
+        + '<button onclick="removeOutlineChapter('+i+')" style="font-size:11px;border:none;background:none;color:#ef4444;cursor:pointer">删除</button></div>'
         + '<div class="field"><div class="field-label">标题</div><input data-of="title" value="'+esc(ch.title||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
         + '<div class="field"><div class="field-label">梗概</div><input data-of="summary" value="'+esc(ch.summary||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
         + '<div class="field"><div class="field-label">冲突</div><input data-of="conflict" value="'+esc(ch.conflict||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
         + '<div class="field"><div class="field-label">钩子</div><input data-of="hook" value="'+esc(ch.hook||"")+'" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px"></div>'
         + '<div class="field"><div class="field-label">关键场景</div><textarea data-of="scenes" rows="3" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc((ch.key_scenes||[]).join("\n"))+'</textarea></div>'
         + '<div class="field"><div class="field-label">登场角色</div><textarea data-of="chars" rows="2" style="width:100%;padding:6px 8px;border:1px solid var(--c-border);border-radius:6px;font-family:inherit">'+esc((ch.characters_involved||[]).join("\n"))+'</textarea></div>'
-        + '<div style="margin-top:8px"><button class="btn btn-primary" onclick="generateSingleChapter('+i+')" id="gen-ch-'+i+'" style="font-size:12px;padding:6px 14px">⚡ 生成本章</button>'
+        + '<div style="margin-top:8px"><button class="btn btn-primary" onclick="generateSingleChapter('+i+')" id="gen-ch-'+i+'" style="font-size:12px;padding:6px 14px">'+(chStatus[i]?'重新生成':'⚡ 生成本章')+'</button>'
         + (chStatus[i]?' <span style="color:#22c55e;font-size:12px">✅ 已生成</span>':'')
         + '</div></div>';
       }).join('');
@@ -552,9 +1005,25 @@ function renderOutline(outline){
 }
 
 async function deleteNovel(){
-  if(!currentNovelId||!confirm('确定删除这篇小说？')) return;
+  if(!currentNovelId||!confirm('确定把这篇小说移入回收站？')) return;
   await fetch('/api/novels/'+currentNovelId,{method:'DELETE'});
   navigate('library');
+}
+
+async function restoreCurrentNovelFromMemory(){
+  if(!novelData){ alert("当前浏览器内存里没有可恢复的小说数据"); return; }
+  try{
+    var body = JSON.parse(JSON.stringify(novelData));
+    var r = await fetch("/api/restore-novel", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body),
+    });
+    if(!r.ok) throw new Error((await r.json()).detail || "恢复失败");
+    var data = await r.json();
+    alert("已恢复小说");
+    navigate("novel", data.id);
+  }catch(e){ alert("恢复失败: "+e.message); }
 }
 
 
@@ -562,35 +1031,282 @@ function renderOutlineRead(outline){
   var chapters = (novelData && novelData.chapters) || [];
   var chStatus = {};
   chapters.forEach(function(c,i){ if(c && c.trim()) chStatus[i]=true; });
-  return '<h2>&#128221; 分章大纲</h2>'
+  var _remain = outline.length - chapters.filter(function(c){return c&&c.trim();}).length;
+  var _bb = '<div style="margin-bottom:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      + '<button class="btn btn-primary" onclick="startBatchGeneration()" id="batch-gen-btn" style="font-size:13px;padding:8px 18px">生成全部章节</button>'
+      + (_remain > 0 ? '<span style="color:var(--c-muted);font-size:12px">还有 ' + _remain + ' 章未生成</span>' : '')
+      + '</div>'
+      + '<div id="batch-progress" style="display:none;margin-bottom:14px">'
+      + '<div style="height:8px;background:var(--c-border);border-radius:4px;overflow:hidden">'
+      + '<div id="batch-progress-bar" style="height:100%;width:0%;background:var(--c-primary);transition:width 0.5s"></div></div>'
+      + '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:12px">'
+      + '<span id="batch-progress-text" style="color:var(--c-muted)">准备中...</span>'
+      + '<button onclick="cancelBatchGeneration()" style="font-size:11px;border:none;background:none;color:#ef4444;cursor:pointer">取消</button></div></div>';
+  return outlineActionsBar()
+    + _bb
     + outline.map(function(ch,i){return '<div class="chapter-item">'
-      + '<h4>第'+ch.chapter_number+'章：'+esc(ch.title||"")+'</h4>'
+      + '<div style="display:flex;align-items:center;gap:10px;justify-content:space-between">'
+      + '<label class="outline-select-control" style="display:'+(outlineSelectMode?'inline-flex':'none')+';font-size:13px;color:var(--c-muted);align-items:center;gap:6px"><input type="checkbox" class="outline-delete-check" value="'+i+'" onchange="updateOutlineDeleteButton()"> 选择</label>'
+      + '<h4 style="flex:1">第'+ch.chapter_number+'章：'+esc(ch.title||"")+'</h4>'
+      + '</div>'
       + '<div class="meta">'+esc(ch.summary||"")+'</div>'
       + '<div class="field" style="margin-top:8px"><div class="field-label">冲突</div><div class="field-value">'+esc(ch.conflict||"")+'</div></div>'
       + '<div class="field"><div class="field-label">钩子</div><div class="field-value" style="color:var(--c-primary)">'+esc(ch.hook||"")+'</div></div>'
-      + (ch.key_scenes&&ch.key_scenes.length?'<div class="field"><div class="field-label">关键场景</div><div class="field-value">'+ch.key_scenes.map(function(s){return "• "+esc(s);}).join("<br>")+'</div></div>':'')
       + (ch.characters_involved&&ch.characters_involved.length?'<div class="field"><div class="field-label">登场角色</div><div class="field-value">'+ch.characters_involved.join(" / ")+'</div></div>':'')
-      + '<div style="margin-top:10px"><button class="btn btn-primary" onclick="generateSingleChapter('+i+')" id="gen-ch-'+i+'" style="font-size:12px;padding:6px 14px">⚡ 生成本章</button>'
-      + (chStatus[i]?' <span style="color:#22c55e;font-size:12px;margin-left:8px">✅ 已生成</span>':'')
+      + '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-primary" onclick="generateSingleChapter('+i+')" id="gen-ch-'+i+'" style="font-size:12px;padding:6px 14px">'+(chStatus[i]?'重新生成':'生成本章')+'</button>'
+
+      + (chStatus[i]?' <span style="color:#22c55e;font-size:12px;margin-left:4px">已生成</span>':'')
       + '</div></div>';
     }).join('');
 }
 
 function renderChapters(chapters){
   if(!chapters||!chapters.length) return '<p style="color:var(--c-muted);text-align:center;padding:40px">没有章节，点击大纲中的“⚡生成本章”按钮开始写作</p>';
-  return '<h2>&#128214; 章节正文</h2>'+chapters.map(function(ch,i){
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">'
+    + '<h2 style="margin:0">&#128214; 章节正文</h2>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    + '<button class="btn btn-secondary" onclick="toggleChapterSelectMode()" id="chapter-select-btn" style="font-size:13px;padding:7px 14px">多选删除</button>'
+    + '<button class="btn btn-secondary" onclick="selectAllGeneratedChapters()" id="chapter-select-all-btn" style="font-size:13px;padding:7px 14px;display:none">全选已生成</button>'
+    + '<button class="btn btn-secondary" onclick="clearChapterSelection()" id="chapter-clear-btn" style="font-size:13px;padding:7px 14px;display:none">清空选择</button>'
+    + '<button class="btn btn-primary" onclick="deleteSelectedChapters()" id="chapter-delete-selected-btn" style="font-size:13px;padding:7px 14px;display:none;background:#ef4444">删除所选</button>'
+    + '</div></div>'
+    + chapters.map(function(ch,i){
+    if(!ch || !ch.trim()) return '<div class="chapter-item" style="opacity:.6"><h4>第 '+(i+1)+' 章</h4><div style="font-size:13px;color:var(--c-muted)">尚未生成</div></div>';
     var display=ch.length>500?ch.slice(0,500)+'...<p style="color:var(--c-muted);font-size:12px;margin-top:4px">(剩余 '+ch.length+' 字)</p>':ch;
-    return '<div class="chapter-item"><div style="display:flex;justify-content:space-between;align-items:center"><h4>第 '+(i+1)+' 章</h4><button onclick="downloadChapter('+i+')" style="font-size:11px;padding:3px 8px;border:1px solid var(--c-border);border-radius:5px;background:none;cursor:pointer;color:var(--c-primary)">下载 TXT</button></div><div style="font-size:13px;margin-top:8px;line-height:1.8;white-space:pre-wrap">'+esc(display)+'</div></div>';
+    return '<div class="chapter-item"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">'
+      + '<label class="chapter-select-control" style="display:none;font-size:13px;color:var(--c-muted);align-items:center;gap:6px"><input type="checkbox" class="chapter-delete-check" value="'+i+'" onchange="updateChapterDeleteButton()"> 选择</label>'
+      + '<h4 style="flex:1">第 '+(i+1)+' 章</h4><button onclick="downloadChapter('+i+')" style="font-size:11px;padding:3px 8px;border:1px solid var(--c-border);border-radius:5px;background:none;cursor:pointer;color:var(--c-primary)">下载 TXT</button></div><div style="font-size:13px;margin-top:8px;line-height:1.8;white-space:pre-wrap">'+esc(display)+'</div></div>';
   }).join('');
+}
+
+function renderAudit(report){
+  report = report || null;
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">'
+    + '<div><h2 style="margin:0">&#128269; 小说审稿</h2>'
+    + '<div style="font-size:12px;color:var(--c-muted);margin-top:4px">检查章节与世界观、角色卡、大纲、节奏段落和剧情圣经的冲突、重复和跑偏</div></div>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    + '<select id="audit-focus" style="padding:7px 10px;border:1px solid var(--c-border);border-radius:6px;background:#fff">'
+    + '<option value="all">全部检查</option><option value="conflict">冲突优先</option><option value="duplicate">重复优先</option><option value="outline">大纲关联</option>'
+    + '</select>'
+    + '<button class="btn btn-primary" onclick="runNovelAudit()" id="audit-btn" style="font-size:13px;padding:8px 16px">开始审稿</button>'
+    + (report ? '<button class="btn btn-secondary" onclick="applyAuditOutline()" id="audit-apply-btn" style="font-size:13px;padding:8px 16px">根据审稿更新大纲</button>' : '')
+    + '</div></div>'
+    + '<div id="audit-status" style="font-size:13px;color:var(--c-muted);margin-bottom:12px"></div>';
+  if(!report){
+    return html + '<p style="color:var(--c-muted);padding:24px;text-align:center">暂无审稿报告。生成章节后点击「开始审稿」。</p>';
+  }
+  var issues = Array.isArray(report.issues) ? report.issues : [];
+  var score = report.score || 0;
+  html += '<div class="chapter-item" style="border-left:3px solid var(--c-primary)">'
+    + '<h4>总体评分：'+esc(score)+'/100</h4>'
+    + '<div class="field-value">'+esc(report.summary || '')+'</div>'
+    + (report.created_at ? '<div style="font-size:12px;color:var(--c-muted);margin-top:8px">审稿时间：'+esc(report.created_at)+'</div>' : '')
+    + '</div>';
+  html += '<h3 style="font-size:15px;margin:18px 0 10px">问题列表</h3>';
+  if(!issues.length){
+    html += '<div class="chapter-item"><div class="field-value">未发现明确冲突或重复章节。</div></div>';
+  }else{
+    html += issues.map(function(it){
+      var sev = it.severity || 'medium';
+      var color = sev==='high' ? '#ef4444' : (sev==='low' ? '#64748b' : '#f59e0b');
+      var nums = (it.chapter_numbers || []).map(function(n){return '第'+n+'章';}).join('、');
+      return '<div class="chapter-item" style="border-left:3px solid '+color+'">'
+        + '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">'
+        + '<h4>'+esc(it.title || it.type || '审稿问题')+'</h4>'
+        + '<span class="tag" style="border-color:'+color+';color:'+color+'">'+esc(sev)+'</span></div>'
+        + '<div class="field"><div class="field-label">章节</div><div class="field-value">'+esc(nums || '未指定')+'</div></div>'
+        + '<div class="field"><div class="field-label">类型</div><div class="field-value">'+esc(it.type || '')+'</div></div>'
+        + '<div class="field"><div class="field-label">证据</div><div class="field-value">'+esc(it.evidence || '')+'</div></div>'
+        + '<div class="field"><div class="field-label">建议</div><div class="field-value">'+esc(it.suggestion || '')+'</div></div>'
+        + '</div>';
+    }).join('');
+  }
+  var cmap = Array.isArray(report.chapter_map) ? report.chapter_map : [];
+  if(cmap.length){
+    html += '<h3 style="font-size:15px;margin:18px 0 10px">章节状态</h3>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">'
+      + cmap.map(function(ch){
+        return '<div class="chapter-item" style="padding:10px 12px"><b>第 '+esc(ch.chapter_number)+' 章</b>'
+          + '<div style="font-size:12px;color:var(--c-muted);margin-top:4px">'+esc(ch.title || '')+'</div>'
+          + '<div style="font-size:12px;margin-top:6px">'+esc(ch.status || '')+'</div></div>';
+      }).join('') + '</div>';
+  }
+  return html;
+}
+
+var chapterSelectMode = false;
+var outlineSelectMode = false;
+
+function toggleChapterSelectMode(){
+  chapterSelectMode = !chapterSelectMode;
+  applyChapterSelectMode();
+}
+
+function applyChapterSelectMode(){
+  document.querySelectorAll(".chapter-select-control").forEach(function(el){
+    el.style.display = chapterSelectMode ? "inline-flex" : "none";
+  });
+  ["chapter-select-all-btn","chapter-clear-btn","chapter-delete-selected-btn"].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.style.display = chapterSelectMode ? "inline-block" : "none";
+  });
+  var btn = document.getElementById("chapter-select-btn");
+  if(btn) btn.textContent = chapterSelectMode ? "退出多选" : "多选删除";
+  if(!chapterSelectMode) clearChapterSelection();
+  updateChapterDeleteButton();
+}
+
+function selectedChapterIndexes(){
+  return Array.from(document.querySelectorAll(".chapter-delete-check:checked")).map(function(el){return parseInt(el.value);});
+}
+
+function updateChapterDeleteButton(){
+  var btn = document.getElementById("chapter-delete-selected-btn");
+  if(!btn) return;
+  var count = selectedChapterIndexes().length;
+  btn.textContent = count ? "删除所选（"+count+"）" : "删除所选";
+  btn.disabled = count === 0;
+}
+
+function selectAllGeneratedChapters(){
+  document.querySelectorAll(".chapter-delete-check").forEach(function(el){ el.checked = true; });
+  updateChapterDeleteButton();
+}
+
+function clearChapterSelection(){
+  document.querySelectorAll(".chapter-delete-check").forEach(function(el){ el.checked = false; });
+  updateChapterDeleteButton();
+}
+
+async function deleteSelectedChapters(){
+  var indexes = selectedChapterIndexes();
+  if(!indexes.length){ alert("请先选择要删除的章节"); return; }
+  if(!confirm("确定删除所选 "+indexes.length+" 章正文？章节大纲会保留，可以之后重新生成。")) return;
+  var chapters = listChaptersForSave();
+  indexes.forEach(function(i){ if(i >= 0 && i < chapters.length) chapters[i] = ""; });
+  try{
+    var body = JSON.parse(JSON.stringify(novelData));
+    body.chapters = chapters;
+    var r = await fetch("/api/novels/"+currentNovelId, {
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body),
+    });
+    if(!r.ok) throw new Error((await r.json()).detail || "删除失败");
+    chapterSelectMode = false;
+    await loadNovel(currentNovelId);
+    switchTab("chapters");
+  }catch(e){ alert("删除失败: "+e.message); }
+}
+
+function listChaptersForSave(){
+  var chapters = (novelData && novelData.chapters) ? novelData.chapters.slice() : [];
+  return chapters;
+}
+
+function toggleOutlineSelectMode(){
+  outlineSelectMode = !outlineSelectMode;
+  applyOutlineSelectMode();
+}
+
+function applyOutlineSelectMode(){
+  document.querySelectorAll(".outline-select-control").forEach(function(el){
+    el.style.display = outlineSelectMode ? "inline-flex" : "none";
+  });
+  ["outline-select-all-btn","outline-clear-btn","outline-delete-selected-btn"].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.style.display = outlineSelectMode ? "inline-block" : "none";
+  });
+  var btn = document.getElementById("outline-select-btn");
+  if(btn) btn.textContent = outlineSelectMode ? "退出多选" : "多选删除";
+  if(!outlineSelectMode) clearOutlineSelection();
+  updateOutlineDeleteButton();
+}
+
+function selectedOutlineIndexes(){
+  return Array.from(document.querySelectorAll(".outline-delete-check:checked")).map(function(el){return parseInt(el.value);});
+}
+
+function updateOutlineDeleteButton(){
+  var btn = document.getElementById("outline-delete-selected-btn");
+  if(!btn) return;
+  var count = selectedOutlineIndexes().length;
+  btn.textContent = count ? "删除所选（"+count+"）" : "删除所选";
+  btn.disabled = count === 0;
+}
+
+function selectAllOutlineChapters(){
+  document.querySelectorAll(".outline-delete-check").forEach(function(el){ el.checked = true; });
+  updateOutlineDeleteButton();
+}
+
+function clearOutlineSelection(){
+  document.querySelectorAll(".outline-delete-check").forEach(function(el){ el.checked = false; });
+  updateOutlineDeleteButton();
+}
+
+function renumberOutline(outline){
+  return (outline || []).map(function(ch,i){
+    var item = Object.assign({}, ch || {});
+    item.chapter_number = i + 1;
+    item.title = item.title || "";
+    item.summary = item.summary || "";
+    item.conflict = item.conflict || "";
+    item.hook = item.hook || "";
+    item.key_scenes = item.key_scenes || [];
+    item.characters_involved = item.characters_involved || [];
+    return item;
+  });
+}
+
+async function deleteSelectedOutlines(){
+  var indexes = selectedOutlineIndexes();
+  if(!indexes.length){ alert("请先选择要删除的章节大纲"); return; }
+  var generated = indexes.filter(function(i){
+    return novelData && novelData.chapters && novelData.chapters[i] && novelData.chapters[i].trim();
+  }).length;
+  var msg = "确定删除所选 "+indexes.length+" 条章节大纲？删除后剩余大纲会重新编号。";
+  if(generated){
+    msg += "\n\n其中 "+generated+" 章已经生成正文。删除大纲不会删除正文，但正文和后续大纲可能错位。";
+  }
+  if(!confirm(msg)) return;
+
+  var indexSet = {};
+  indexes.forEach(function(i){ indexSet[i] = true; });
+
+  if(editMode){
+    syncOutlineFromDOM();
+    editData.outline = renumberOutline((editData.outline || []).filter(function(_,i){ return !indexSet[i]; }));
+    outlineSelectMode = false;
+    switchTab("outline");
+    return;
+  }
+
+  try{
+    var body = JSON.parse(JSON.stringify(novelData));
+    body.outline = renumberOutline((body.outline || []).filter(function(_,i){ return !indexSet[i]; }));
+    var r = await fetch("/api/novels/"+currentNovelId, {
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body),
+    });
+    if(!r.ok) throw new Error((await r.json()).detail || "删除失败");
+    outlineSelectMode = false;
+    await loadNovel(currentNovelId);
+    outlineSubTab = "chapter";
+    switchTab("outline");
+  }catch(e){ alert("删除失败: "+e.message); }
 }
 
 // --- edit mode ---
 var editMode = false;
 var editData = {};
+var pendingEditPayload = null;
 
 function enterEdit(){
   editMode = true;
   editData = JSON.parse(JSON.stringify(novelData));
+  syncPrimaryVolume(editData);
   document.getElementById("edit-bar").style.display = "flex";
   switchTab(currentTab);
 }
@@ -599,6 +1315,134 @@ function cancelEdit(){
   editMode = false;
   document.getElementById("edit-bar").style.display = "none";
   switchTab(currentTab);
+}
+
+function showAssistUpdate(){
+  if(!currentNovelId) return;
+  var target = "all";
+  if(currentTab === "world") target = "world";
+  else if(currentTab === "characters") target = "characters";
+  else if(currentTab === "outline") target = "outline";
+  else if(currentTab === "bible") target = "bible";
+  document.getElementById("assist-target").value = target;
+  document.getElementById("assist-instructions").value = "";
+  document.getElementById("assist-status").textContent = "";
+  document.getElementById("assist-overlay").classList.add("active");
+}
+
+function hideAssistUpdate(){
+  document.getElementById("assist-overlay").classList.remove("active");
+}
+
+function hideCharacterPreview(){
+  document.getElementById("character-preview-overlay").classList.remove("active");
+}
+
+function normalizeCharacterCard(c){
+  c = c || {};
+  return {
+    name: (c.name || "").trim(),
+    role: (c.role || "").trim(),
+    archetype: (c.archetype || "").trim(),
+    appearance: (c.appearance || "").trim(),
+    personality: (c.personality || "").trim(),
+    background: (c.background || "").trim(),
+    motivation: (c.motivation || "").trim(),
+    abilities: (c.abilities || "").trim(),
+    flaws: (c.flaws || "").trim(),
+    arc: (c.arc || "").trim(),
+  };
+}
+
+function characterCardChangedKeys(oldCard, newCard){
+  var keys = ["name","role","archetype","appearance","personality","background","motivation","abilities","flaws","arc"];
+  return keys.filter(function(k){ return (oldCard||{})[k] !== (newCard||{})[k]; });
+}
+
+function buildCharacterPreviewHtml(prevChars, nextChars){
+  prevChars = Array.isArray(prevChars) ? prevChars : [];
+  nextChars = Array.isArray(nextChars) ? nextChars : [];
+  var map = {};
+  prevChars.forEach(function(c, idx){
+    var key = (c && c.name || "").trim() || ("__idx_" + idx);
+    map[key] = c;
+  });
+  var blocks = nextChars.map(function(c, idx){
+    var key = (c && c.name || "").trim() || ("__idx_" + idx);
+    var oldCard = map[key] || {};
+    var changed = characterCardChangedKeys(oldCard, c);
+    var title = (c.name || ("角色 " + (idx + 1))) + (c.role ? " · " + c.role : "");
+    var badge = changed.length ? '<span style="font-size:12px;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:999px">已修改</span>' : '<span style="font-size:12px;color:#475569;background:#e2e8f0;padding:2px 8px;border-radius:999px">未变动</span>';
+    var diff = changed.length ? changed.map(function(k){
+      return '<div style="display:grid;grid-template-columns:110px 1fr 1fr;gap:10px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--c-border)">'
+        + '<div style="font-size:12px;color:var(--c-muted)">'+k+'</div>'
+        + '<div><div style="font-size:11px;color:var(--c-muted);margin-bottom:4px">原来</div><div>'+esc(oldCard[k]||"")+'</div></div>'
+        + '<div><div style="font-size:11px;color:var(--c-muted);margin-bottom:4px">现在</div><div>'+esc(c[k]||"")+'</div></div>'
+        + '</div>';
+    }).join('') : '<div style="font-size:13px;color:var(--c-muted);margin-top:8px">这一张没有变化</div>';
+    return '<div style="padding:14px 0;border-bottom:1px solid var(--c-border)">' 
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">'
+      + '<div><strong>'+esc(title)+'</strong></div>' + badge + '</div>'
+      + diff + '</div>';
+  }).join('');
+  return blocks || '<div style="color:var(--c-muted);font-size:13px">未检测到角色卡变化</div>';
+}
+
+function openCharacterPreview(oldChars, newChars, payload){
+  pendingEditPayload = payload;
+  document.getElementById("character-preview-body").innerHTML = buildCharacterPreviewHtml(oldChars, newChars);
+  document.getElementById("character-preview-overlay").classList.add("active");
+}
+
+async function confirmCharacterPreview(){
+  if(!pendingEditPayload) return;
+  hideCharacterPreview();
+  var payload = pendingEditPayload;
+  pendingEditPayload = null;
+  await submitEditPayload(payload);
+}
+
+async function submitEditPayload(data){
+  try{
+    var r = await fetch("/api/novels/"+currentNovelId, {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(data),
+    });
+    if(!r.ok) throw new Error((await r.json()).detail || "保存失败");
+    editMode = false;
+    document.getElementById("edit-bar").style.display = "none";
+    await loadNovel(currentNovelId);
+  }catch(e){ alert("保存失败: "+e.message); }
+}
+
+async function submitAssistUpdate(){
+  if(!currentNovelId) return;
+  var target = document.getElementById("assist-target").value;
+  var instructions = document.getElementById("assist-instructions").value.trim();
+  if(!instructions){ alert("请先输入修改方向"); return; }
+  var btn = document.getElementById("assist-submit");
+  var status = document.getElementById("assist-status");
+  if(btn){ btn.disabled = true; btn.textContent = "更新中..."; }
+  status.textContent = "AI 正在重写设定，请稍等...";
+  try{
+    var r = await fetch("/api/novels/"+currentNovelId+"/assist-update", {
+      method: "POST",
+      headers: Object.assign({"Content-Type":"application/json"}, getSettingsHeaders()),
+      body: JSON.stringify({target: target, instructions: instructions}),
+    });
+    if(!r.ok) throw new Error(await readError(r, "AI 辅助更新失败"));
+    var data = await r.json();
+    novelData = data.novel;
+    syncPrimaryVolume(novelData);
+    hideAssistUpdate();
+    switchTab(currentTab);
+    alert("已更新：" + (data.updated || []).join("、"));
+  }catch(e){
+    status.textContent = "更新失败：" + e.message;
+    alert("更新失败: " + e.message);
+  }
+  if(btn){ btn.disabled = false; btn.textContent = "开始更新"; }
 }
 
 async function saveEdit(){
@@ -638,14 +1482,22 @@ async function saveEdit(){
       });
     });
   }
+  var oldChars = (novelData && novelData.characters) ? JSON.parse(JSON.stringify(novelData.characters)) : [];
 
-  // collect outline forms
+  // collect volume outline form
+  var volForms = document.querySelectorAll(".vol-edit");
+  if(volForms.length){
+    data.volume_outlines = collectVolumeForms();
+    data.volume_outline = data.volume_outlines[0] || {};
+  }
+
+  // collect outline forms（按 DOM 顺序重新编号，兼容增删后的位置变化）
   var chForms = document.querySelectorAll(".ch-edit");
   if(chForms.length > 0){
     data.outline = [];
-    chForms.forEach(function(el){
+    chForms.forEach(function(el,i){
       data.outline.push({
-        chapter_number: parseInt(el.dataset.cn),
+        chapter_number: i+1,
         title: el.querySelector("[data-of='title']").value,
         summary: el.querySelector("[data-of='summary']").value,
         conflict: el.querySelector("[data-of='conflict']").value,
@@ -656,17 +1508,11 @@ async function saveEdit(){
     });
   }
 
-  try{
-    var r = await fetch("/api/novels/"+currentNovelId, {
-      method: "PUT",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(data),
-    });
-    if(!r.ok) throw new Error((await r.json()).detail || "保存失败");
-    editMode = false;
-    document.getElementById("edit-bar").style.display = "none";
-    await loadNovel(currentNovelId);
-  }catch(e){ alert("保存失败: "+e.message); }
+  if(charForms.length > 0){
+    openCharacterPreview(oldChars, data.characters || [], data);
+    return;
+  }
+  await submitEditPayload(data);
 }
 
 async function generateSingleChapter(idx){
@@ -677,7 +1523,65 @@ async function generateSingleChapter(idx){
     if(!r.ok) throw new Error((await r.json()).detail || "生成失败");
     await loadNovel(currentNovelId);
   }catch(e){ alert("生成失败: "+e.message); }
-  if(btn){ btn.disabled = false; btn.textContent = "⚡ 生成本章"; }
+  if(btn){
+    btn.disabled = false;
+    var generated = novelData && novelData.chapters && novelData.chapters[idx] && novelData.chapters[idx].trim();
+    btn.textContent = generated ? "重新生成" : "⚡ 生成本章";
+  }
+}
+
+async function runNovelAudit(){
+  if(!currentNovelId) return;
+  var btn = document.getElementById("audit-btn");
+  var status = document.getElementById("audit-status");
+  var focusEl = document.getElementById("audit-focus");
+  var focus = focusEl ? focusEl.value : "all";
+  if(btn){ btn.disabled = true; btn.textContent = "审稿中..."; }
+  if(status) status.textContent = "AI 正在检查章节关联、冲突和重复内容...";
+  try{
+    var r = await fetch("/api/novels/"+currentNovelId+"/audit", {
+      method:"POST",
+      headers:Object.assign({"Content-Type":"application/json"}, getSettingsHeaders()),
+      body:JSON.stringify({focus:focus}),
+    });
+    if(!r.ok) throw new Error(await readError(r, "审稿失败"));
+    var data = await r.json();
+    novelData.audit_report = data.report;
+    switchTab("audit");
+  }catch(e){
+    if(status) status.textContent = "审稿失败：" + e.message;
+    alert("审稿失败: " + e.message);
+  }
+  if(btn){ btn.disabled = false; btn.textContent = "开始审稿"; }
+}
+
+async function applyAuditOutline(){
+  if(!currentNovelId) return;
+  if(!confirm("根据最近审稿报告更新大纲，并同步重写受影响章节正文？")) return;
+  var btn = document.getElementById("audit-apply-btn");
+  var status = document.getElementById("audit-status");
+  if(btn){ btn.disabled = true; btn.textContent = "更新中..."; }
+  if(status) status.textContent = "AI 正在根据审稿报告校准篇章、节奏和章节大纲，并重写受影响正文...";
+  try{
+    var r = await fetch("/api/novels/"+currentNovelId+"/audit/apply-outline", {
+      method:"POST",
+      headers:getSettingsHeaders(),
+    });
+    if(!r.ok) throw new Error(await readError(r, "更新大纲失败"));
+    var data = await r.json();
+    novelData = data.novel;
+    syncPrimaryVolume(novelData);
+    outlineSubTab = "chapter";
+    switchTab("outline");
+    var rewritten = (data.rewritten_chapters || []).map(function(ch){
+      return "第" + ch.chapter_number + "章";
+    });
+    alert("已根据审稿报告更新大纲。" + (rewritten.length ? (" 已同步重写：" + rewritten.join("、") + "。") : " 没有需要重写的正文。"));
+  }catch(e){
+    if(status) status.textContent = "更新大纲失败：" + e.message;
+    alert("更新大纲失败: " + e.message);
+  }
+  if(btn){ btn.disabled = false; btn.textContent = "根据审稿更新大纲"; }
 }
 
 
@@ -719,6 +1623,229 @@ function downloadChapter(i){
   a.click();URL.revokeObjectURL(url);
 }
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function addCharacter(){
+  if(!editData || !editData.characters) return;
+  editData.characters.push({name:"",role:"",archetype:"",appearance:"",personality:"",background:"",motivation:"",abilities:"",flaws:"",arc:""});
+  switchTab("characters");
+}
+
+function removeCharacter(idx){
+  if(!editData || !editData.characters) return;
+  if(!confirm("确定删除这个角色？")) return;
+  editData.characters.splice(idx, 1);
+  switchTab("characters");
+}
+
+// 把编辑态大纲表单的当前值同步回 editData（增删章节前调用，避免丢失未保存的修改）
+function collectVolumeForms(){
+  var vols = [];
+  document.querySelectorAll(".vol-edit").forEach(function(form){
+    var vo = {};
+    form.querySelectorAll("[data-vf]").forEach(function(el){
+      var k = el.dataset.vf;
+      if(k==="key_events") vo[k] = el.value.split("\n").map(function(s){return s.trim();}).filter(Boolean);
+      else if(k==="chapter_start"||k==="chapter_end") vo[k] = parseInt(el.value)||0;
+      else vo[k] = el.value;
+    });
+    vols.push(vo);
+  });
+  return vols;
+}
+
+function syncOutlineFromDOM(){
+  if(!editData) return;
+  var volForms = document.querySelectorAll(".vol-edit");
+  if(volForms.length){
+    editData.volume_outlines = collectVolumeForms();
+    editData.volume_outline = editData.volume_outlines[0] || {};
+  }
+  var chForms = document.querySelectorAll(".ch-edit");
+  if(chForms.length){
+    editData.outline = [];
+    chForms.forEach(function(el,i){
+      editData.outline.push({
+        chapter_number: i+1,
+        title: el.querySelector("[data-of='title']").value,
+        summary: el.querySelector("[data-of='summary']").value,
+        conflict: el.querySelector("[data-of='conflict']").value,
+        hook: el.querySelector("[data-of='hook']").value,
+        key_scenes: el.querySelector("[data-of='scenes']").value.split("\n").filter(Boolean),
+        characters_involved: el.querySelector("[data-of='chars']").value.split("\n").filter(Boolean).map(function(s){return s.trim();}),
+      });
+    });
+  }
+}
+
+function addVolumeOutline(){
+  if(!editData) return;
+  syncOutlineFromDOM();
+  if(!editData.volume_outlines) editData.volume_outlines = getVolumeOutlines(editData);
+  var last = editData.volume_outlines[editData.volume_outlines.length - 1] || {};
+  var start = (parseInt(last.chapter_end)||0) + 1;
+  editData.volume_outlines.push({name:"新篇章",arc:"",chapter_start:start||1,chapter_end:(start||1)+29,core_conflict:"",climax:"",key_events:[]});
+  syncPrimaryVolume(editData);
+  switchTab("outline");
+}
+
+function removeVolumeOutline(idx){
+  if(!editData) return;
+  syncOutlineFromDOM();
+  if(!editData.volume_outlines) editData.volume_outlines = getVolumeOutlines(editData);
+  if(!editData.volume_outlines.length) return;
+  if(!confirm("确定删除这个篇章大纲？章节大纲和正文不会被删除。")) return;
+  editData.volume_outlines.splice(idx, 1);
+  syncPrimaryVolume(editData);
+  switchTab("outline");
+}
+
+function addOutlineChapter(){
+  if(!editData) return;
+  syncOutlineFromDOM();
+  if(!editData.outline) editData.outline = [];
+  editData.outline.push({chapter_number:editData.outline.length+1,title:"",summary:"",conflict:"",hook:"",key_scenes:[],characters_involved:[]});
+  switchTab("outline");
+}
+
+function removeOutlineChapter(idx){
+  if(!editData || !editData.outline) return;
+  var hasDraft = novelData && novelData.chapters && novelData.chapters[idx] && novelData.chapters[idx].trim();
+  var msg = hasDraft
+    ? "第"+(idx+1)+"章已生成正文。删除大纲不会删除正文，但后续章节正文会与大纲错位。确定删除该章大纲？"
+    : "确定删除第"+(idx+1)+"章大纲？";
+  if(!confirm(msg)) return;
+  syncOutlineFromDOM();
+  editData.outline.splice(idx, 1);
+  editData.outline.forEach(function(ch,i){ ch.chapter_number = i+1; });
+  switchTab("outline");
+}
+
+// AI 续写章节大纲（读态/编辑态都可用）。编辑态下先保存当前修改，再追加续写结果。
+async function expandOutline(){
+  if(!currentNovelId) return;
+  var cntEl = document.getElementById("expand-count");
+  var count = cntEl ? (parseInt(cntEl.value)||5) : 5;
+  var btn = document.getElementById("expand-btn");
+  if(btn){ btn.disabled = true; btn.textContent = "AI 续写中..."; }
+  try{
+    // 编辑态：先把当前未保存的大纲修改持久化，避免被续写结果覆盖
+    if(editMode){
+      syncOutlineFromDOM();
+      await fetch("/api/novels/"+currentNovelId, {
+        method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(editData)
+      });
+    }
+    var r = await fetch("/api/novels/"+currentNovelId+"/expand-outline", {
+      method:"POST",
+      headers: Object.assign({"Content-Type":"application/json"}, getSettingsHeaders()),
+      body: JSON.stringify({count: count}),
+    });
+    if(!r.ok) throw new Error((await r.json()).detail || "续写失败");
+    var res = await r.json();
+    await loadNovel(currentNovelId);
+    if(editMode){ editData = JSON.parse(JSON.stringify(novelData)); }
+    switchTab("outline");
+    alert("已续写 "+res.added+" 章大纲");
+  }catch(e){ alert("续写失败: "+e.message); }
+  if(btn){ btn.disabled = false; btn.textContent = "✨ AI 续写章节大纲"; }
+}
+
+
+function showRewriteDialog(idx){
+  var instr = prompt("第"+(idx+1)+"章重写指令（可选）：\n\n例如：\n- 加强打斗场面\n- 增加对话\n- 改写为悬疑风格\n\n留空则按原大纲重写");
+  if(instr===null) return;
+  rewriteChapter(idx, instr);
+}
+
+async function rewriteChapter(idx, instructions){
+  var btn = document.getElementById("rew-ch-"+idx);
+  if(btn){ btn.disabled = true; btn.textContent = "重写中..."; }
+  try{
+    var r = await fetch("/api/novels/"+currentNovelId+"/rewrite-chapter/"+idx, {
+      method:"POST",
+      headers: Object.assign({"Content-Type":"application/json"}, getSettingsHeaders()),
+      body: JSON.stringify({instructions: instructions || ""})
+    });
+    if(!r.ok) throw new Error((await r.json()).detail || "重写失败");
+    await loadNovel(currentNovelId);
+  }catch(e){ alert("重写失败: "+e.message); }
+  if(btn){ btn.disabled = false; btn.textContent = "重写"; }
+}
+
+var batchPollTimer = null;
+
+async function startBatchGeneration(){
+  if(batchPollTimer) clearInterval(batchPollTimer);
+  var btn = document.getElementById("batch-gen-btn");
+  if(btn){ btn.disabled=true; btn.textContent="生成中..."; }
+  showBatchProgress("准备中...", 0);
+  try{
+    var r = await fetch("/api/novels/"+currentNovelId+"/generate-remaining", {method:"POST", headers:getSettingsHeaders()});
+    if(!r.ok) throw new Error((await r.json()).detail || "启动失败");
+    pollBatchProgress(true);
+  }catch(e){ alert("批量生成失败: "+e.message); if(btn){ btn.disabled=false; btn.textContent="生成全部章节"; } }
+}
+
+function cancelBatchGeneration(){
+  if(batchPollTimer){ clearInterval(batchPollTimer); batchPollTimer=null; }
+  fetch("/api/novels/"+currentNovelId+"/cancel-generation", {method:"POST"});
+  showBatchProgress("已取消", 0);
+  var btn=document.getElementById("batch-gen-btn");
+  if(btn){ btn.disabled=false; btn.textContent="生成全部章节"; }
+}
+
+function showBatchProgress(text, pct){
+  var box = document.getElementById("batch-progress");
+  var bar = document.getElementById("batch-progress-bar");
+  var label = document.getElementById("batch-progress-text");
+  if(box) box.style.display="block";
+  if(bar) bar.style.width=(pct||0)+"%";
+  if(label) label.textContent=text;
+}
+
+async function pollBatchProgress(loop){
+  if(!currentNovelId) return;
+  if(batchPollTimer){ clearInterval(batchPollTimer); batchPollTimer=null; }
+  async function tick(){
+    try{
+      var pr = await fetch("/api/novels/"+currentNovelId+"/generation-progress");
+      var pg = await pr.json();
+      var pct = pg.total>0 ? Math.round(pg.completed/pg.total*100) : 0;
+      var text = pg.status=="running" ? "正在生成第"+(pg.current!==null?pg.current+1:"?")+"章... ("+pct+"%)" : pg.status;
+      showBatchProgress(text, pct);
+      var btn = document.getElementById("batch-gen-btn");
+      if(pg.status=="running"){
+        if(btn){ btn.disabled=true; btn.textContent="生成中..."; }
+        if(loop) batchPollTimer = setTimeout(tick, 2000);
+      }else{
+        if(btn){ btn.disabled=false; btn.textContent="生成全部章节"; }
+        if(pg.errors && pg.errors.length){
+          alert("生成完成，但有 " + pg.errors.length + " 个错误：\n" + pg.errors.join("\n"));
+        }
+        await loadNovel(currentNovelId);
+      }
+    }catch(e){
+      if(loop) batchPollTimer = setTimeout(tick, 3000);
+    }
+  }
+  tick();
+}
+
+async function resumeBatchProgress(){
+  if(!currentNovelId) return;
+  try{
+    var pr = await fetch("/api/novels/"+currentNovelId+"/generation-progress");
+    var pg = await pr.json();
+    if(pg.status === "running"){
+      if(currentTab !== "outline"){
+        // 进度条只存在于大纲页，不强制切页，避免打断用户阅读。
+        return;
+      }
+      pollBatchProgress(true);
+    }
+  }catch(e){}
+}
+
 </script>
 </body>
 </html>

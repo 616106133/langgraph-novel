@@ -19,10 +19,25 @@ Thumbs.db
 
 # Project specific
 novels/
+deleted_novels/
 outputs/
 *.log
+_scratch/
+.streamlit/*.py
+.streamlit/*.bat
+.streamlit/*.txt
+
+# Runtime logs
+fastapi_err.txt
+fastapi_out.txt
+streamlit_err.txt
+streamlit_error.txt
+streamlit_out.txt
+streamlit_output.txt
+
+# Nested / unrelated repos
+墨神 (Mo-Shen)/
 
 # Deployment
 Dockerfile
 fly.toml
-

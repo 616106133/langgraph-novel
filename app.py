@@ -36,7 +36,7 @@ PROVIDERS = {
 }
 
 
-def _run_pipeline(idea: str, mock: bool, model: str, api_key: str, base_url: str):
+def _run_pipeline(idea: str, mock: bool, model: str, api_key: str, base_url: str, genre: str = "urban"):
     os.environ["NOVEL_MOCK"] = "1" if mock else "0"
     os.environ["NOVEL_LLM_MODEL"] = model
     os.environ["OPENAI_API_BASE"] = base_url
@@ -51,7 +51,7 @@ def _run_pipeline(idea: str, mock: bool, model: str, api_key: str, base_url: str
     config = {"configurable": {"thread_id": "novel-run-001"}}
     chapters = []
 
-    for event in app.stream({"user_idea": idea}, config):
+    for event in app.stream({"user_idea": idea, "genre": genre}, config):
         yield event
         for name, value in event.items():
             if name == "advance":
@@ -158,6 +158,20 @@ idea = st.text_area(
     height=100,
 )
 
+GENRE_OPTIONS = {
+    "urban": "都市类（现代背景）",
+    "wuxia": "武侠类（古代/架空江湖）",
+    "xianxia": "仙侠类（修真/神话体系）",
+    "mystery": "推理/悬疑类（核心是解谜）",
+    "romance": "青春恋爱轻小说",
+}
+genre = st.selectbox(
+    "小说流派",
+    options=list(GENRE_OPTIONS.keys()),
+    format_func=lambda k: GENRE_OPTIONS[k],
+    help="选择流派会影响大纲生成的方向和风格",
+)
+
 col1, col2 = st.columns([2, 8])
 with col1:
     run_btn = st.button(
@@ -211,7 +225,7 @@ if run_btn and idea.strip():
         error_ph = st.empty()
 
     try:
-        for ev in _run_pipeline(idea, mock_mode, model, api_key, base_url):
+        for ev in _run_pipeline(idea, mock_mode, model, api_key, base_url, genre):
             if "_done" in ev:
                 st.session_state.chapters = ev["chapters"]
                 st.session_state.finished = True
@@ -221,8 +235,21 @@ if run_btn and idea.strip():
                 if name == "outline":
                     with outline_ph.container():
                         st.markdown(f"**:material/list_alt: \u5927\u7eb2\u5df2\u751f\u6210**")
-                        for i, ch in enumerate(value.get("outline", [])):
-                            st.write(f"\u3000**Ch{i+1}:** {ch[:60]}")
+                        volume = value.get("volume_outline", {})
+                        if volume:
+                            st.write(
+                                f"　**篇章：** {volume.get('name', '')} "
+                                f"（第{volume.get('chapter_start', '?')}-{volume.get('chapter_end', '?')}章）"
+                            )
+                            if volume.get("arc"):
+                                st.write(f"　{volume.get('arc')}")
+                        for ch in value.get("outline", []):
+                            title = ch.get("title", "")
+                            summary = ch.get("summary", "")
+                            chapter_no = ch.get("chapter_number", "?")
+                            st.write(f"　**Ch{chapter_no}: {title}**")
+                            if summary:
+                                st.caption(summary[:80])
                 elif name == "write":
                     draft = value.get("current_draft", "")
                     with write_ph.container():
