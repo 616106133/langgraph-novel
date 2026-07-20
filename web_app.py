@@ -541,15 +541,6 @@ def _create_novel_worker(job_id, title, idea, genre, source_title="", source_sum
         CREATE_PROGRESS[job_id] = {"status": "error", "message": "生成失败", "novel_id": None, "error": str(e)}
 
 
-@app.get("/{path:path}")
-async def index(path: str = ""):
-    """Serve SPA ? if the path is not an API route, serve index.html."""
-    if path.startswith("api/") or path.startswith("openapi") or path in ("docs", "redoc"):
-        from fastapi.exceptions import HTTPException
-        raise HTTPException(404)
-    return HTMLResponse((HERE / "templates" / "index.html").read_text("utf-8"))
-
-
 @app.get("/api/novels")
 def list_novels():
     items = []
@@ -1047,6 +1038,13 @@ def generation_progress(nid: str):
 
 
 @app.post("/api/novels/{nid}/cancel-generation")
+@app.get("/{path:path}")
+async def index(path: str = ""):
+    """Serve SPA ? if the path is not an API route, serve index.html."""
+    if path.startswith("api/") or path.startswith("openapi") or path in ("docs", "redoc"):
+        from fastapi.exceptions import HTTPException
+        raise HTTPException(404)
+    return HTMLResponse((HERE / "templates" / "index.html").read_text("utf-8"))
 def cancel_generation(nid: str):
     GEN_CANCEL.add(nid)
     if nid in GEN_PROGRESS:
