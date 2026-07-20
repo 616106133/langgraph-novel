@@ -431,7 +431,7 @@ function render(){
   const page = hash[0]||'home';
   const param = hash[1]||null;
 
-  Object.values(routes).forEach(id=>document.getElementById(id).classList.remove('active'));
+  Object.values(routes).forEach(id=>{var e=document.getElementById(id);if(e)e.classList.remove('active');});
   const target = routes[page];
   if(target) document.getElementById(target).classList.add('active');
 

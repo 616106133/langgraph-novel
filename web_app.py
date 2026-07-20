@@ -6,6 +6,7 @@ import difflib
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 HERE = Path(__file__).parent
@@ -15,6 +16,16 @@ DELETED_NOVELS_DIR = HERE / "deleted_novels"
 DELETED_NOVELS_DIR.mkdir(exist_ok=True)
 
 app = FastAPI()
+
+# CORS ? allow any origin for local deployment & reverse proxy scenarios
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 GEN_PROGRESS = {}
 GEN_CANCEL = set()
 CREATE_PROGRESS = {}
@@ -530,8 +541,12 @@ def _create_novel_worker(job_id, title, idea, genre, source_title="", source_sum
         CREATE_PROGRESS[job_id] = {"status": "error", "message": "生成失败", "novel_id": None, "error": str(e)}
 
 
-@app.get("/")
-def index():
+@app.get("/{path:path}")
+async def index(path: str = ""):
+    """Serve SPA ? if the path is not an API route, serve index.html."""
+    if path.startswith("api/") or path.startswith("openapi") or path in ("docs", "redoc"):
+        from fastapi.exceptions import HTTPException
+        raise HTTPException(404)
     return HTMLResponse((HERE / "templates" / "index.html").read_text("utf-8"))
 
 
