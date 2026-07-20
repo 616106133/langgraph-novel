@@ -1524,7 +1524,21 @@ def reconstruct_imported_novel(novel: dict, chapters_raw: list) -> dict:
 def expand_chapter_outlines(state, count=5):
     existing = state.get("outline", []) or []
     vol = state.get("volume_outline", {}) or {}
-    next_num = (existing[-1]["chapter_number"] + 1) if existing else max(int(vol.get("chapter_start", 1) or 1), 1)
+    # Detect gaps: find first missing chapter number within volume range
+    existing_nums = sorted(
+        int(ch.get("chapter_number", i+1) or (i+1))
+        for i, ch in enumerate(existing) if isinstance(ch, dict)
+    )
+    vol_start = max(int(vol.get("chapter_start", 1) or 1), 1)
+    if existing_nums:
+        expected = vol_start
+        for n in existing_nums:
+            if n > expected:
+                break
+            expected = n + 1
+        next_num = expected
+    else:
+        next_num = vol_start
     beat = _current_pacing_beat(state, next_num)
 
     if globals().get("MOCK", False) or llm is None:
