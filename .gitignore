@@ -23,9 +23,12 @@ deleted_novels/
 outputs/
 *.log
 _scratch/
-.streamlit/*.py
+# .streamlit/ - ignore temp scripts, track only the startup script
+.streamlit/config.toml
 .streamlit/*.bat
 .streamlit/*.txt
+.streamlit/*.py
+!.streamlit/start_fastapi.py
 
 # Runtime logs
 fastapi_err.txt
@@ -38,6 +41,3 @@ streamlit_output.txt
 # Nested / unrelated repos
 墨神 (Mo-Shen)/
 
-# Deployment
-Dockerfile
-fly.toml

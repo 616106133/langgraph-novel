@@ -655,9 +655,26 @@ def _default_pacing_outline(volume_outline: dict) -> list:
 
 
 def sync_pacing_outline_for_outline(state: dict) -> list:
-    """Keep pacing beats covering all chapter outlines without rewriting existing beats."""
+    """Keep pacing beats covering all chapter outlines without rewriting existing beats.
+    Pass state['force']=True to force-regenerate from volume outline content."""
     outline = state.get("outline", []) or []
     volume = state.get("volume_outline", {}) or {}
+    force = state.get("force", False)
+
+    # if volume outline changed, force-regenerate all pacing beats from scratch
+    if force and volume:
+        vol_for_default = dict(volume)
+        if outline:
+            chapter_nums = [
+                int(ch.get("chapter_number", i + 1) or (i + 1))
+                for i, ch in enumerate(outline)
+                if isinstance(ch, dict)
+            ]
+            if chapter_nums:
+                vol_for_default["chapter_start"] = min(chapter_nums)
+                vol_for_default["chapter_end"] = max(chapter_nums)
+        return _default_pacing_outline(vol_for_default)
+
     pacing = [dict(b) for b in (state.get("pacing_outline", []) or []) if isinstance(b, dict)]
     if not outline:
         return pacing or _default_pacing_outline(volume)

@@ -658,11 +658,15 @@ def update_novel(nid: str, body: SaveReq):
         novel["volume_outlines"] = [novel["volume_outline"]]
     if "outline" in provided or "pacing_outline" in provided or "volume_outline" in provided or "volume_outlines" in provided:
         np = _reload()
-        novel["pacing_outline"] = np.sync_pacing_outline_for_outline({
+        _state = {
             "volume_outline": novel.get("volume_outline", {}),
             "pacing_outline": novel.get("pacing_outline", []),
             "outline": novel.get("outline", []),
-        })
+        }
+        # ????????????????????
+        if "volume_outline" in provided or "volume_outlines" in provided:
+            _state["force"] = True
+        novel["pacing_outline"] = np.sync_pacing_outline_for_outline(_state)
     _save(nid, novel)
     return {"ok": True}
 

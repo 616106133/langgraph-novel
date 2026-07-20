@@ -1,3 +1,11 @@
+
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# Frontend server
+streamlit>=1.30.0
+
 annotated-types==0.7.0
 anyio==4.14.2
 certifi==2026.6.17
@@ -41,6 +49,4 @@ websockets==15.0.1
 xxhash==3.8.1
 zstandard==0.25.0
 
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
 
